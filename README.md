@@ -23,10 +23,14 @@ TODO:
 10/19/2022: 
 Incorporated `midir` to establish connection to a MIDI port. Implemented basic sequencer.
 
+10/20/2022:
+Added multithreaded playback
+
 Next:
 - [x] Support for physical devices over USB
 - [x] Support of simple looping sequences (fixed note sequence, static duration)
-- [ ] Run sequences in a new thread that can be gracefully stopped via user input (e.g., Ctrl-C / `SIGINT`)
+- [x] Run sequences in a new thread that can be gracefully stopped via user input (e.g., Ctrl-C / `SIGINT`)
+- [x] Support running multiple sequences in different threads
 - [ ] Support for dynamic note duration -- i.e., duration is a function of previous n events
 - [ ] Support for dynamic velocity -- i.e., velocity is function of previous n events
 - [ ] Break core library classes out of `Midibox` execution
@@ -35,7 +39,7 @@ Next:
 - [ ] Support for sending MIDI to software synthesizers running in a DAW like Ableton Live.
 
 Misc:
-- [ ] Create Github & check in
+- [x] Create Github & check in
 
 ### Future: Distributed Execution
 
