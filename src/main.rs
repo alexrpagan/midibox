@@ -36,6 +36,8 @@ impl Bpm {
 struct FixedSequence {
     /// The notes that can be produced by a sequence
     note_values: Vec<u8>,
+    /// The velocity to use for notes produced by this sequence
+    velocity: Option<u8>,
     /// How long to hold each note in discrete metronome ticks
     ticks_to_hold: u32,
     /// The index of the play head into note_values. Note that `next()` will increment this, so
@@ -56,6 +58,7 @@ impl Iterator for FixedSequence {
         let note_value = self.note_values.get(self.head_position)?;
         Some(SequenceNote {
             midi: Some(*note_value),
+            velocity: self.velocity,
             ticks_to_hold: self.ticks_to_hold
         })
     }
@@ -64,6 +67,7 @@ impl Iterator for FixedSequence {
 #[derive(Debug, Clone)]
 struct SequenceNote {
     midi: Option<u8>,
+    velocity: Option<u8>,
     ticks_to_hold: u32,
 }
 
@@ -182,14 +186,15 @@ fn spawn_sequence(
     let to_run = Arc::clone(&running);
     let mut sequence_copy = sequence.clone();
     thread::spawn(move || {
+        // block until all other sequence threads are ready to start
         barrier.wait();
-
         println!("Midibox Starting.");
         while to_run.load() {
-            match note_tx.send(vec![sequence_copy.next().unwrap()]) {
+            let batch = vec![sequence_copy.next().unwrap()];
+            match note_tx.send(batch) {
                 Ok(_) => {}
                 Err(e) => {
-                    println!("Encountered error while sending batch of notes {}", e);
+                    println!("Encountered while sending notes: {}", e);
                 }
             }
         }
@@ -199,16 +204,17 @@ fn spawn_sequence(
     note_rx
 }
 
+
+const NOTE_ON_MSG: u8 = 0x90;
+const NOTE_OFF_MSG: u8 = 0x80;
+const VELOCITY: u8 = 100;
+
 fn main() {
     match run() {
         Ok(_) => (),
         Err(err) => println!("Error: {}", err)
     }
 }
-
-const NOTE_ON_MSG: u8 = 0x90;
-const NOTE_OFF_MSG: u8 = 0x80;
-const VELOCITY: u8 = 0x64;
 
 fn run() -> Result<(), Box<dyn Error>> {
     let midi_out = MidiOutput::new("Midi Outputs")?;
@@ -240,29 +246,34 @@ fn run() -> Result<(), Box<dyn Error>> {
     let running = Arc::new(AtomicCell::new(true));
     let clean_up_finished = Arc::new(AtomicCell::new(false));
 
-    let mut conn_out = midi_out.connect(out_port, "midibox-out")?;
+    let mut device_conn = midi_out.connect(out_port, "midibox-out")?;
 
-    let (stop_tx, stop_rx) = bounded(1);
+    // channel to indicate that `main` should exit
+    let (exit_tx, exit_rx) = bounded(1);
+
+    // channel to transmit messages from the Player to the MIDI device
     let (raw_midi_tx, raw_midi_rx): (Sender<[u8; 3]>, Receiver<[u8; 3]>) = bounded(1024);
+
+    // true when the player is done accepting input and has send NOTE OFF for all playing notes
     let device_cleanup_finished = Arc::clone(&clean_up_finished);
     thread::spawn(move || {
         println!("MIDI Device Starting.");
 
         while !device_cleanup_finished.load() {
-            forward_to_midi_device(&raw_midi_rx, &mut conn_out);
+            forward_to_midi_device(&raw_midi_rx, &mut device_conn);
         }
 
-        // drain the channel in case the player sent any cleanup messages
+        // drain the channel in case the player sent any note-off messages
         while !raw_midi_rx.is_empty() {
-            forward_to_midi_device(&raw_midi_rx, &mut conn_out);
+            forward_to_midi_device(&raw_midi_rx, &mut device_conn);
         }
 
-        stop_tx.send(()).expect("Could not send stop signal.");
+        exit_tx.send(()).expect("Could not send stop signal.");
         println!("MIDI Device Exiting.");
     });
 
-    let sigint_running = Arc::clone(&running);
-    ctrlc::set_handler(move || sigint_running.store(false))?;
+    let ctrlc_running = Arc::clone(&running);
+    ctrlc::set_handler(move || ctrlc_running.store(false))?;
 
     // Set up sequences to play
     let seq_1 = &FixedSequence {
@@ -273,6 +284,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             71, // B
             69, // A
         ],
+        velocity: None,
         ticks_to_hold: 2,
         head_position: 0
     };
@@ -284,6 +296,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             71, // B
             69, // A
         ],
+        velocity: None,
         ticks_to_hold: 3,
         head_position: 2
     };
@@ -295,6 +308,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             71, // B
             69, // A
         ],
+        velocity: None,
         ticks_to_hold: 5,
         head_position: 1
     };
@@ -303,6 +317,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             36, // C2
             45, // A2
         ],
+        velocity: None,
         ticks_to_hold: 32,
         head_position: 1
     };
@@ -313,7 +328,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         seq_4
     ];
 
-    //
+    // make sure that all sequence threads have started before starting ticker
     let starting_line = Arc::new(Barrier::new(sequences.len() + 1));
     let mut player = Player {
         tick_duration: Bpm::new(500).tick_duration(),
@@ -350,27 +365,30 @@ fn run() -> Result<(), Box<dyn Error>> {
         println!("Player Exiting.");
     });
 
-    stop_rx.recv().expect("Failed while receiving stop signal.");
+    exit_rx.recv()?;
     Ok(())
 }
 
-fn send_note_to_device(raw_midi_tx: &Sender<[u8; 3]>, playing: PlayingNote, code: u8) {
+fn send_note_to_device(raw_midi_tx: &Sender<[u8; 3]>, playing: PlayingNote, midi_status: u8) {
     match playing.note.midi {
         None => { /* resting */ }
         Some(v) => {
-            raw_midi_tx.send([code, v, VELOCITY]).expect("Failed to send note!")
+            raw_midi_tx
+                .send([midi_status, v, playing.note.velocity.unwrap_or(VELOCITY)])
+                .expect("Failed to send note!")
         }
     }
 }
 
-fn forward_to_midi_device(raw_midi_rx: &Receiver<[u8; 3]>, conn_out: &mut MidiOutputConnection) {
+fn forward_to_midi_device(
+    raw_midi_rx: &Receiver<[u8; 3]>,
+    device_conn: &mut MidiOutputConnection
+) {
     match raw_midi_rx.recv_timeout(Duration::from_secs(1)) {
         Ok(msg) => {
-            let _ = conn_out.send(&msg);
+            let _ = device_conn.send(&msg);
         }
-        Err(e) => {
-            println!("Error while recieving MIDI data {}", e);
-        }
+        Err(e) => println!("Error while recieving MIDI data {}", e)
     }
 }
 
