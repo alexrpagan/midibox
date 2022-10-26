@@ -3,7 +3,7 @@ use std::error::Error;
 use std::io::{stdin, stdout, Write};
 use std::sync::{Arc, Barrier};
 use std::thread;
-use std::thread::{current, sleep};
+use std::thread::{sleep};
 use std::time::Duration;
 
 use crossbeam::atomic::AtomicCell;
@@ -32,10 +32,14 @@ impl Bpm {
     }
 }
 
+trait Midibox: Send + Sync {
+    fn iter(&self) -> Box<dyn Iterator<Item = Note> + '_>;
+}
+
 #[derive(Debug, Clone)]
 struct FixedSequence {
     /// The notes that can be produced by a sequence
-    note_values: Vec<u8>,
+    note_values: Vec<Option<u8>>,
     /// The velocity to use for notes produced by this sequence
     velocity: Option<u8>,
     /// How long to hold each note in discrete metronome ticks
@@ -46,36 +50,52 @@ struct FixedSequence {
     head_position: usize,
 }
 
-impl Iterator for FixedSequence {
-    type Item = SequenceNote;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let number_of_notes = self.note_values.len();
-        if !(self.head_position < number_of_notes) {
-            return None
-        }
-        self.head_position = (self.head_position + 1) % (number_of_notes);
-        let note_value = self.note_values.get(self.head_position)?;
-        Some(SequenceNote {
-            midi: Some(*note_value),
+impl FixedSequence {
+    fn shift_forward(&self, ticks: usize) -> FixedSequence {
+        return FixedSequence {
+            note_values: self.note_values.clone(),
             velocity: self.velocity,
-            ticks_to_hold: self.ticks_to_hold
-        })
+            ticks_to_hold: self.ticks_to_hold,
+            head_position: (self.head_position + ticks) % self.note_values.len(),
+        }
+    }
+
+    fn duration(&self, ticks: u32) -> FixedSequence {
+        return FixedSequence {
+            note_values: self.note_values.clone(),
+            velocity: self.velocity,
+            ticks_to_hold: ticks,
+            head_position: self.head_position,
+        }
+    }
+}
+
+impl Midibox for FixedSequence {
+    fn iter(&self) -> Box<dyn Iterator<Item = Note> + '_> {
+        return Box::new(self.note_values
+            .iter()
+            .map(|pitch| Note {
+                pitch: *pitch,
+                velocity: self.velocity,
+                duration: self.ticks_to_hold
+            })
+            .cycle()
+            .skip(self.head_position));
     }
 }
 
 #[derive(Debug, Clone)]
-struct SequenceNote {
-    midi: Option<u8>,
+struct Note {
+    pitch: Option<u8>,
     velocity: Option<u8>,
-    ticks_to_hold: u32,
+    duration: u32,
 }
 
 #[derive(Debug, Clone)]
 struct PlayingNote {
     channel_id: usize,
     start_tick_id: u64,
-    note: SequenceNote,
+    note: Note,
 }
 
 #[derive(Debug, Clone)]
@@ -83,7 +103,7 @@ struct Player {
     tick_duration: Duration,
     tick_id: u64,
     note_id: u64,
-    channels: Vec<Receiver<Vec<SequenceNote>>>,
+    channels: Vec<Receiver<Vec<Note>>>,
     playing_notes: HashMap<u64, PlayingNote>
 }
 
@@ -95,8 +115,9 @@ impl Player {
     }
 
     /// Increment and return the tick_id
-    fn incr_tick_id(&mut self) -> u64 {
+    fn tick(&mut self) -> u64 {
         self.tick_id += 1;
+        sleep(self.tick_duration);
         return self.tick_id;
     }
 
@@ -110,7 +131,7 @@ impl Player {
     }
 
     /// Perform a non-blocking poll of all channels the player is connected to. Each channel may
-    /// return a vector
+    /// return a vectors of notes to play simultaneously.
     fn poll_channels(&mut self) -> Vec<PlayingNote> {
         for (channel_id, note_channel) in self.channels.clone().iter().enumerate() {
             if !self.should_poll_channel(channel_id) {
@@ -121,7 +142,7 @@ impl Player {
                     println!("Channel {} sent notes {:?}", channel_id, notes);
                     for note in notes {
                         let note_id = self.incr_note_id();
-                        if note.ticks_to_hold == 0 {
+                        if note.duration == 0 {
                             continue; // ignore zero-duration notes
                         }
                         // track the note we're about to play so that we can stop it after the
@@ -152,7 +173,7 @@ impl Player {
     fn clear_elapsed_notes(&mut self) -> Vec<PlayingNote> {
         let current_tick = self.tick_id;
         return self.clear_notes(|note| {
-            return note.start_tick_id + (note.note.ticks_to_hold as u64) == current_tick
+            return note.start_tick_id + (note.note.duration as u64) == current_tick
         });
     }
 
@@ -179,18 +200,20 @@ impl Player {
 fn spawn_sequence(
     running: &Arc<AtomicCell<bool>>,
     starting_line: &Arc<Barrier>,
-    sequence: &FixedSequence
-) -> Receiver<Vec<SequenceNote>> {
-    let (note_tx, note_rx): (Sender<Vec<SequenceNote>>, Receiver<Vec<SequenceNote>>) = bounded(16);
+    sequence: &Arc<dyn Midibox>
+) -> Receiver<Vec<Note>> {
+    let (note_tx, note_rx)
+        : (Sender<Vec<Note>>, Receiver<Vec<Note>>) = bounded(1024);
     let barrier = Arc::clone(&starting_line);
     let to_run = Arc::clone(&running);
-    let mut sequence_copy = sequence.clone();
+    let midibox = sequence.clone();
     thread::spawn(move || {
         // block until all other sequence threads are ready to start
         barrier.wait();
+        let mut seq_iter = midibox.iter();
         println!("Midibox Starting.");
         while to_run.load() {
-            let batch = vec![sequence_copy.next().unwrap()];
+            let batch = vec![seq_iter.next().unwrap()];
             match note_tx.send(batch) {
                 Ok(_) => {}
                 Err(e) => {
@@ -210,13 +233,40 @@ const NOTE_OFF_MSG: u8 = 0x80;
 const VELOCITY: u8 = 100;
 
 fn main() {
-    match run() {
+    // Set up sequences to play
+    let seq_1 = Arc::new(FixedSequence {
+        note_values: vec![
+            Some(60), // C4 (middle C)
+            None,
+            None,
+            Some(67), // G
+            Some(64), // E
+            None,
+            Some(71), // B
+            Some(69), // A
+        ],
+        velocity: Some(60),
+        ticks_to_hold: 2,
+        head_position: 0
+    });
+
+    let seq_2 = Arc::new(
+        seq_1
+            .shift_forward(2)
+            .duration(3)
+    );
+
+    let sequences : Vec<Arc<dyn Midibox>> = vec![
+        seq_1, seq_2
+    ];
+
+    match run(450, sequences) {
         Ok(_) => (),
         Err(err) => println!("Error: {}", err)
     }
 }
 
-fn run() -> Result<(), Box<dyn Error>> {
+fn run(bpm: u32, sequences: Vec<Arc<dyn Midibox>>) -> Result<(), Box<dyn Error>> {
     let midi_out = MidiOutput::new("Midi Outputs")?;
 
     // Get an output port (read from console if multiple are available)
@@ -275,67 +325,14 @@ fn run() -> Result<(), Box<dyn Error>> {
     let ctrlc_running = Arc::clone(&running);
     ctrlc::set_handler(move || ctrlc_running.store(false))?;
 
-    // Set up sequences to play
-    let seq_1 = &FixedSequence {
-        note_values: vec![
-            60, // C4 (middle C)
-            67, // G
-            64, // E
-            71, // B
-            69, // A
-        ],
-        velocity: None,
-        ticks_to_hold: 2,
-        head_position: 0
-    };
-    let seq_2 = &FixedSequence {
-        note_values: vec![
-            60, // C4 (middle C)
-            67, // G
-            64, // E
-            71, // B
-            69, // A
-        ],
-        velocity: None,
-        ticks_to_hold: 3,
-        head_position: 2
-    };
-    let seq_3 = &FixedSequence {
-        note_values: vec![
-            60, // C4 (middle C)
-            67, // G
-            64, // E
-            71, // B
-            69, // A
-        ],
-        velocity: None,
-        ticks_to_hold: 5,
-        head_position: 1
-    };
-    let seq_4 = &FixedSequence {
-        note_values: vec![
-            36, // C2
-            45, // A2
-        ],
-        velocity: None,
-        ticks_to_hold: 32,
-        head_position: 1
-    };
-    let sequences : Vec<&FixedSequence> = vec![
-        seq_1,
-        seq_2,
-        //seq_3,
-        seq_4
-    ];
-
     // make sure that all sequence threads have started before starting ticker
     let starting_line = Arc::new(Barrier::new(sequences.len() + 1));
     let mut player = Player {
-        tick_duration: Bpm::new(500).tick_duration(),
+        tick_duration: Bpm::new(bpm).tick_duration(),
         tick_id: 0,
         note_id: 0,
         channels: sequences.iter()
-            .map(|seq| spawn_sequence(&running, &starting_line, seq))
+            .map(|seq| spawn_sequence(&running, &starting_line, &seq))
             .collect(),
         playing_notes: HashMap::new(),
     };
@@ -350,10 +347,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             for note in player.poll_channels() {
                 send_note_to_device(&raw_midi_tx, note, NOTE_ON_MSG)
             }
-
-            sleep(player.tick_duration);
-            player.incr_tick_id();
-
+            player.tick();
             for note in player.clear_elapsed_notes() {
                 send_note_to_device(&raw_midi_tx, note, NOTE_OFF_MSG)
             }
@@ -370,7 +364,7 @@ fn run() -> Result<(), Box<dyn Error>> {
 }
 
 fn send_note_to_device(raw_midi_tx: &Sender<[u8; 3]>, playing: PlayingNote, midi_status: u8) {
-    match playing.note.midi {
+    match playing.note.pitch {
         None => { /* resting */ }
         Some(v) => {
             raw_midi_tx
@@ -384,7 +378,7 @@ fn forward_to_midi_device(
     raw_midi_rx: &Receiver<[u8; 3]>,
     device_conn: &mut MidiOutputConnection
 ) {
-    match raw_midi_rx.recv_timeout(Duration::from_secs(1)) {
+    match raw_midi_rx.recv_timeout(Duration::from_secs(30)) {
         Ok(msg) => {
             let _ = device_conn.send(&msg);
         }
