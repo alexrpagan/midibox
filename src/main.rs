@@ -3,7 +3,7 @@ use std::error::Error;
 use std::io::{stdin, stdout, Write};
 use std::sync::{Arc, Barrier};
 use std::thread;
-use std::thread::{sleep};
+use std::thread::sleep;
 use std::time::Duration;
 
 use crossbeam::atomic::AtomicCell;
@@ -39,11 +39,11 @@ trait Midibox: Send + Sync {
 #[derive(Debug, Clone)]
 struct FixedSequence {
     /// The notes that can be produced by a sequence
-    note_values: Vec<Option<u8>>,
+    notes: Vec<Option<u8>>,
     /// The velocity to use for notes produced by this sequence
     velocity: Option<u8>,
     /// How long to hold each note in discrete metronome ticks
-    ticks_to_hold: u32,
+    duration: u32,
     /// The index of the play head into note_values. Note that `next()` will increment this, so
     /// when initialized, this value _not_ the first note that will play of the sequence.
     /// TODO: Consider changing this behavior.
@@ -51,36 +51,40 @@ struct FixedSequence {
 }
 
 impl FixedSequence {
-    fn shift_forward(&self, ticks: usize) -> FixedSequence {
+    fn new(notes: Vec<Option<u8>>) -> Self {
         return FixedSequence {
-            note_values: self.note_values.clone(),
-            velocity: self.velocity,
-            ticks_to_hold: self.ticks_to_hold,
-            head_position: (self.head_position + ticks) % self.note_values.len(),
+            notes,
+            velocity: None,
+            duration: 1,
+            head_position: 0,
         }
     }
-
-    fn duration(&self, ticks: u32) -> FixedSequence {
-        return FixedSequence {
-            note_values: self.note_values.clone(),
-            velocity: self.velocity,
-            ticks_to_hold: ticks,
-            head_position: self.head_position,
-        }
+    fn fast_forward(mut self, ticks: usize) -> Self {
+        self.head_position = (self.head_position + ticks) % self.notes.len();
+        self
+    }
+    fn duration(mut self, ticks: u32) -> Self {
+        self.duration = ticks;
+        self
+    }
+    fn velocity(mut self, velocity: Option<u8>) -> Self {
+        self.velocity = velocity;
+        self
     }
 }
 
 impl Midibox for FixedSequence {
     fn iter(&self) -> Box<dyn Iterator<Item = Note> + '_> {
-        return Box::new(self.note_values
-            .iter()
-            .map(|pitch| Note {
-                pitch: *pitch,
-                velocity: self.velocity,
-                duration: self.ticks_to_hold
-            })
-            .cycle()
-            .skip(self.head_position));
+        return Box::new(
+            self.notes
+                .iter()
+                .map(|pitch| Note {
+                    pitch: *pitch,
+                    velocity: self.velocity,
+                    duration: self.duration
+                })
+                .cycle()
+                .skip(self.head_position));
     }
 }
 
@@ -234,33 +238,37 @@ const VELOCITY: u8 = 100;
 
 fn main() {
     // Set up sequences to play
-    let seq_1 = Arc::new(FixedSequence {
-        note_values: vec![
-            Some(60), // C4 (middle C)
-            None,
-            None,
-            Some(67), // G
-            Some(64), // E
-            None,
-            Some(71), // B
-            Some(69), // A
-        ],
-        velocity: Some(60),
-        ticks_to_hold: 2,
-        head_position: 0
-    });
+    let notes = vec![
+        Some(60), // C4 (middle C)
+        Some(67), // G
+        Some(64), // E
+        Some(71), // B
+        Some(69), // A
+    ];
+
+    let seq_1 = Arc::new(
+        FixedSequence::new(notes.clone())
+            .duration(2)
+            .velocity(Some(60))
+    );
 
     let seq_2 = Arc::new(
-        seq_1
-            .shift_forward(2)
+        FixedSequence::new(notes.clone())
             .duration(3)
+            .fast_forward(2)
+    );
+
+    let seq_3 = Arc::new(
+        FixedSequence::new(notes.clone())
+            .duration(5)
+            .fast_forward(3)
     );
 
     let sequences : Vec<Arc<dyn Midibox>> = vec![
-        seq_1, seq_2
+        seq_1, seq_2, seq_3
     ];
 
-    match run(450, sequences) {
+    match run(500, sequences) {
         Ok(_) => (),
         Err(err) => println!("Error: {}", err)
     }
