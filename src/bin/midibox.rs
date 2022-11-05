@@ -9,42 +9,81 @@ use crossbeam::channel::{bounded, Receiver, Sender};
 use ctrlc;
 use midir::{MidiOutput, MidiOutputConnection, MidiOutputPort};
 
-use musicbox::{Bpm, FixedSequence, Midibox, Note, Player, PlayingNote};
+use musicbox::{Bpm, FixedSequence, Interval, Midi, Midibox, Note, Player, PlayingNote, Tone};
+use musicbox::Interval::{Maj10, Oct, Perf5};
 
 const NOTE_ON_MSG: u8 = 0x90;
 const NOTE_OFF_MSG: u8 = 0x80;
 const VELOCITY: u8 = 100;
 
 fn main() {
-    // Set up sequences to play
-    let notes = vec![
-        Some(60), // C4 (middle C)
-        Some(67), // G
-        Some(64), // E
-        Some(71), // B
-        Some(69), // A
+    let roots = vec![
+        Tone::C.midi(4),
+        Midi::rest(),
+        Midi::rest(),
+        Midi::rest(),
+        Midi::rest(),
+        Midi::rest(),
+        Tone::C.midi(4),
+        Tone::C.midi(4),
+        Tone::G.midi(3),
+        Midi::rest(),
+        Midi::rest(),
+        Tone::G.midi(3),
+        Midi::rest(),
+        Midi::rest(),
+        Tone::G.midi(3),
+        Midi::rest(),
+        Tone::F.midi(3),
+        Midi::rest(),
+        Midi::rest(),
+        Tone::F.midi(3),
+        Midi::rest(),
+        Midi::rest(),
+        Tone::F.midi(3),
+        Midi::rest(),
+        Midi::rest(),
+        Midi::rest(),
+        Midi::rest(),
+        Midi::rest(),
+        Midi::rest(),
+        Tone::C.midi(3),
+        Midi::rest(),
+        Midi::rest(),
+    ];
+    println!("Sequence length: {}", roots.len());
+
+    let arp = vec![
+        Tone::E.midi(5),
+        Tone::B.midi(4),
+        Tone::C.midi(5),
+        Tone::G.midi(4),
+        Tone::B.midi(4),
+        Tone::A.midi(4),
+        Tone::A.midi(4),
+        Tone::E.midi(4),
     ];
 
-    let seq_1 = Arc::new(
-        FixedSequence::new(notes.clone())
-            .duration(2)
-            .velocity(Some(60))
-    );
+    let roots_seq = FixedSequence::new(roots.clone())
+        .velocity(Some(50))
+        .down(Oct)
+        .duration(1);
 
-    let seq_2 = Arc::new(
-        FixedSequence::new(notes.clone())
-            .duration(3)
-            .fast_forward(2)
-    );
-
-    let seq_3 = Arc::new(
-        FixedSequence::new(notes.clone())
-            .duration(5)
-            .fast_forward(3)
-    );
+    let arp_seq = FixedSequence::new(arp.clone())
+        .velocity(Some(50))
+        .duration(4);
 
     let sequences : Vec<Arc<dyn Midibox>> = vec![
-        seq_1, seq_2, seq_3
+        Arc::new(roots_seq.clone()),
+        Arc::new(roots_seq.clone().up(Perf5)),
+        Arc::new(roots_seq.clone().up(Maj10)),
+        Arc::new(arp_seq.clone()),
+        Arc::new(arp_seq.clone()
+            .velocity(Some(5))
+            .down(Oct)
+            .fast_forward(1)
+            .duration(9)
+        ),
     ];
 
     match run(500, sequences) {

@@ -29,10 +29,178 @@ pub trait Midibox: Send + Sync {
     fn iter(&self) -> Box<dyn Iterator<Item = Note> + '_>;
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum Interval {
+    Unison,
+    Min2,
+    Maj2,
+    Min3,
+    Maj3,
+    Perf4,
+    Flat5,
+    Perf5,
+    Min6,
+    Maj6,
+    Min7,
+    Maj7,
+    Oct,
+    Min9,
+    Maj9,
+    Min10,
+    Maj10,
+}
+
+impl Interval {
+    pub fn steps(&self) -> u8 {
+        match self {
+            Interval::Unison => { 0 }
+            Interval::Min2   => { 1 }
+            Interval::Maj2   => { 2 }
+            Interval::Min3   => { 3 }
+            Interval::Maj3   => { 4 }
+            Interval::Perf4  => { 5 }
+            Interval::Flat5  => { 6 }
+            Interval::Perf5  => { 7 }
+            Interval::Min6   => { 8 }
+            Interval::Maj6   => { 9 }
+            Interval::Min7   => { 10 }
+            Interval::Maj7   => { 11 }
+            Interval::Oct    => { 12 }
+            Interval::Min9   => { 13 }
+            Interval::Maj9   => { 14 }
+            Interval::Min10  => { 15 }
+            Interval::Maj10  => { 16 }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Midi {
+    pub tone: Tone,
+    pub oct: u8
+}
+
+impl Midi {
+    pub fn rest() -> Self {
+        return Midi {
+            tone: Tone::Rest,
+            oct: 0
+        }
+    }
+
+    pub fn oct(val: u8) -> u8{
+        (val / 12) - 1
+    }
+
+    pub fn from_option(val: Option<u8>) -> Midi {
+        match val {
+            None => Midi { tone: Tone::Rest, oct: 0 },
+            Some(v) => Midi { tone: Tone::from(v), oct: Midi::oct(v) }
+        }
+    }
+    pub fn from(val: u8) -> Midi {
+        return Midi {
+            tone: Tone::from(val),
+            oct: Midi::oct(val)
+        };
+    }
+
+    pub fn u8(&self) -> Option<u8> {
+        self.tone.u8(self.oct)
+    }
+
+    pub fn up(&self, interval: Interval) -> Self {
+        match self.u8().map(|v| v + interval.steps()) {
+            None => Midi::rest(),
+            Some(v) => Midi::from(v)
+        }
+    }
+    pub fn down(&self, interval: Interval) -> Self {
+        match self.u8().map(|v| v - interval.steps()) {
+            None => Midi::rest(),
+            Some(v) => Midi::from(v)
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Tone {
+    Rest,
+    C,
+    Db,
+    D,
+    Eb,
+    E,
+    F,
+    Gb,
+    G,
+    Ab,
+    A,
+    Bb,
+    B
+}
+
+impl Tone {
+    pub fn from_option(val: Option<u8>) -> Tone {
+        match val {
+            None => Tone::Rest,
+            Some(v) => Tone::from(v)
+        }
+    }
+    pub fn from(val: u8) -> Tone {
+        let pos = val % 12;
+        match pos {
+            0 => Tone::C,
+            1 => Tone::Db,
+            2 => Tone::D,
+            3 => Tone::Eb,
+            4 => Tone::E,
+            5 => Tone::F,
+            6 => Tone::Gb,
+            7 => Tone::G,
+            8 => Tone::Ab,
+            9 => Tone::A,
+            10 => Tone::Bb,
+            11 => Tone::B,
+            _ => Tone::Rest
+        }
+    }
+
+    pub fn get(&self) -> Midi {
+        return self.midi(4);
+    }
+
+    pub fn midi(&self, oct: u8) -> Midi {
+        return Midi {
+            tone: self.clone(),
+            oct
+        }
+    }
+
+    pub fn u8(&self, oct: u8) -> Option<u8> {
+        let base = (oct + 1) * 12;
+        match self {
+            Tone::C  => { Some(base) }
+            Tone::Db => { Some(base + 1) }
+            Tone::D  => { Some(base + 2) }
+            Tone::Eb => { Some(base + 3) }
+            Tone::E  => { Some(base + 4) }
+            Tone::F  => { Some(base + 5) }
+            Tone::Gb => { Some(base + 6) }
+            Tone::G  => { Some(base + 7) }
+            Tone::Ab => { Some(base + 8) }
+            Tone::A  => { Some(base + 9) }
+            Tone::Bb => { Some(base + 10) }
+            Tone::B  => { Some(base + 11) }
+            Tone::Rest => { None }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct FixedSequence {
     /// The notes that can be produced by a sequence
-    notes: Vec<Option<u8>>,
+    notes: Vec<Midi>,
     /// The velocity to use for notes produced by this sequence
     velocity: Option<u8>,
     /// How long to hold each note in discrete metronome ticks
@@ -44,7 +212,7 @@ pub struct FixedSequence {
 }
 
 impl FixedSequence {
-    pub fn new(notes: Vec<Option<u8>>) -> Self {
+    pub fn new(notes: Vec<Midi>) -> Self {
         return FixedSequence {
             notes,
             velocity: None,
@@ -64,6 +232,18 @@ impl FixedSequence {
         self.velocity = velocity;
         self
     }
+    pub fn reverse(mut self) -> Self {
+        self.notes = self.notes.clone().into_iter().rev().collect();
+        self
+    }
+    pub fn up(mut self, interval: Interval) -> Self {
+        self.notes = self.notes.clone().into_iter().map(|m| m.up(interval)).collect();
+        self
+    }
+    pub fn down(mut self, interval: Interval) -> Self {
+        self.notes = self.notes.clone().into_iter().map(|m| m.down(interval)).collect();
+        self
+    }
 }
 
 impl Midibox for FixedSequence {
@@ -72,7 +252,7 @@ impl Midibox for FixedSequence {
             self.notes
                 .iter()
                 .map(|pitch| Note {
-                    pitch: *pitch,
+                    pitch: pitch.u8(),
                     velocity: self.velocity,
                     duration: self.duration
                 })
@@ -209,5 +389,34 @@ impl Player {
                 self.playing_notes.remove(&note_id);
             });
         notes
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Tone};
+
+    #[test]
+    fn tone() {
+        assert_eq!(Tone::C.u8(4), Some(60));
+        assert_eq!(Tone::Db.u8(4), Some(61));
+        assert_eq!(Tone::D.u8(4), Some(62));
+        assert_eq!(Tone::Eb.u8(4), Some(63));
+        assert_eq!(Tone::E.u8(4), Some(64));
+        assert_eq!(Tone::F.u8(4), Some(65));
+        assert_eq!(Tone::Gb.u8(4), Some(66));
+        assert_eq!(Tone::G.u8(4), Some(67));
+        assert_eq!(Tone::Ab.u8(4), Some(68));
+        assert_eq!(Tone::A.u8(4), Some(69));
+        assert_eq!(Tone::Bb.u8(4), Some(70));
+        assert_eq!(Tone::B.u8(4), Some(71));
+    }
+
+    #[test]
+    fn from() {
+        assert_eq!(Tone::from(53), Tone::F);
+        assert_eq!(Tone::from(60), Tone::C);
+        assert_eq!(Tone::from(61), Tone::Db);
+        assert_eq!(Tone::from(100), Tone::E);
     }
 }
