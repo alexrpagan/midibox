@@ -17,65 +17,65 @@ const NOTE_OFF_MSG: u8 = 0x80;
 
 fn main() {
     let roots_seq = FixedSequence::new(vec![
-        Tone::C.midi(4),
+        Tone::C.oct(4),
         Midi::rest(),
         Midi::rest(),
         Midi::rest(),
         Midi::rest(),
         Midi::rest(),
-        Tone::C.midi(4),
-        Tone::C.midi(4),
-        Tone::G.midi(3),
+        Tone::C.oct(4),
+        Tone::C.oct(4),
+        Tone::G.oct(3),
         Midi::rest(),
         Midi::rest(),
-        Tone::G.midi(3),
+        Tone::G.oct(3),
         Midi::rest(),
         Midi::rest(),
-        Tone::G.midi(3),
+        Tone::G.oct(3),
         Midi::rest(),
-        Tone::F.midi(3),
-        Midi::rest(),
-        Midi::rest(),
-        Tone::F.midi(3),
+        Tone::F.oct(3),
         Midi::rest(),
         Midi::rest(),
-        Tone::F.midi(3),
+        Tone::F.oct(3),
         Midi::rest(),
         Midi::rest(),
-        Midi::rest(),
+        Tone::F.oct(3),
         Midi::rest(),
         Midi::rest(),
         Midi::rest(),
-        Tone::C.midi(3),
+        Midi::rest(),
+        Midi::rest(),
+        Midi::rest(),
+        Tone::C.oct(3),
         Midi::rest(),
         Midi::rest(),
     ])
         .velocity(50)
-        .down(Oct);
+        .transpose_down(Oct);
 
     println!("Sequence length: {}", roots_seq.len());
 
     let arp_seq = FixedSequence::new(vec![
-        Tone::E.midi(5),
-        Tone::B.midi(4),
-        Tone::C.midi(5),
-        Tone::G.midi(4),
-        Tone::B.midi(4),
-        Tone::A.midi(4),
-        Tone::A.midi(4),
-        Tone::E.midi(4),
+        Tone::E.oct(5),
+        Tone::B.oct(4),
+        Tone::C.oct(5),
+        Tone::G.oct(4),
+        Tone::B.oct(4),
+        Tone::A.oct(4),
+        Tone::A.oct(4),
+        Tone::E.oct(4),
     ])
         .velocity(75)
         .duration(4);
 
     match run(500, vec![
         Arc::new(roots_seq.clone()),
-        Arc::new(roots_seq.clone().up(Perf5)),
-        Arc::new(roots_seq.clone().up(Maj10)),
+        Arc::new(roots_seq.clone().transpose_up(Perf5)),
+        Arc::new(roots_seq.clone().transpose_up(Maj10)),
         Arc::new(arp_seq.clone()),
         Arc::new(arp_seq.clone()
             .velocity(5)
-            .down(Oct)
+            .transpose_down(Oct)
             .fast_forward(1)
             .duration(9)
         ),

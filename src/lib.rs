@@ -74,6 +74,10 @@ impl Interval {
     }
 }
 
+const DEFAULT_OCT: u8 = 4;
+const DEFAULT_VELOCITY: u8 = 100;
+const DEFAULT_DURATION: u32 = 1;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Midi {
     pub tone: Tone,
@@ -84,7 +88,12 @@ pub struct Midi {
 
 impl Midi {
     pub fn rest() -> Self {
-        return Midi { tone: Tone::Rest, oct: 0, velocity: 0, duration: 1 }
+        return Midi {
+            tone: Tone::Rest,
+            oct: DEFAULT_OCT,
+            velocity: DEFAULT_VELOCITY,
+            duration: DEFAULT_DURATION
+        }
     }
 
     pub fn oct(val: u8) -> u8 {
@@ -99,7 +108,7 @@ impl Midi {
     }
 
     pub fn from_tone(tone: Tone, oct: u8) -> Midi {
-        return Midi { tone, oct, velocity: 100, duration: 1 }
+        return Midi { tone, oct, velocity: DEFAULT_VELOCITY, duration: DEFAULT_DURATION }
     }
 
     pub fn from(val: u8) -> Midi {
@@ -110,31 +119,31 @@ impl Midi {
         self.tone.u8(self.oct)
     }
 
-    pub fn velocity(&self, velocity: u8) -> Self {
+    pub fn set_velocity(&self, velocity: u8) -> Self {
         return Midi { tone: self.tone, oct: self.oct, velocity, duration: self.duration };
     }
 
-    pub fn duration(&self, duration: u32) -> Self {
+    pub fn set_duration(&self, duration: u32) -> Self {
         return Midi { tone: self.tone, oct: self.oct, velocity: self.velocity, duration };
     }
 
-    pub fn pitch_u8(&self, val: Option<u8>) -> Self {
+    pub fn set_pitch_u8(&self, val: Option<u8>) -> Self {
         match val {
-            None => self.pitch(Tone::Rest, 0),
-            Some(v) => self.pitch(Tone::from(v), Midi::oct(v))
+            None => self.set_pitch(Tone::Rest, 0),
+            Some(v) => self.set_pitch(Tone::from(v), Midi::oct(v))
         }
     }
 
-    pub fn pitch(&self, tone: Tone, oct: u8) -> Self {
+    pub fn set_pitch(&self, tone: Tone, oct: u8) -> Self {
         return Midi { tone, oct, velocity: self.velocity, duration: self.duration }
     }
 
-    pub fn up(&self, interval: Interval) -> Self {
-        self.pitch_u8(self.u8_maybe().map(|v| v + interval.steps()))
+    pub fn transpose_up(&self, interval: Interval) -> Self {
+        self.set_pitch_u8(self.u8_maybe().map(|v| v + interval.steps()))
     }
 
-    pub fn down(&self, interval: Interval) -> Self {
-        self.pitch_u8(self.u8_maybe().map(|v| v - interval.steps()))
+    pub fn transpose_down(&self, interval: Interval) -> Self {
+        self.set_pitch_u8(self.u8_maybe().map(|v| v - interval.steps()))
     }
 }
 
@@ -195,10 +204,10 @@ impl Tone {
     }
 
     pub fn get(&self) -> Midi {
-        return self.midi(4);
+        return self.oct(4);
     }
 
-    pub fn midi(&self, oct: u8) -> Midi {
+    pub fn oct(&self, oct: u8) -> Midi {
         return Midi::from_tone(self.clone(), oct);
     }
 }
@@ -226,27 +235,27 @@ impl FixedSequence {
         self
     }
     pub fn duration(mut self, duration: u32) -> Self {
-        self.notes = self.notes.clone().into_iter().map(|m| m.duration(duration)).collect();
+        self.notes = self.notes.clone().into_iter().map(|m| m.set_duration(duration)).collect();
         self
     }
     pub fn velocity(mut self, velocity: u8) -> Self {
-        self.notes = self.notes.clone().into_iter().map(|m| m.velocity(velocity)).collect();
+        self.notes = self.notes.clone().into_iter().map(|m| m.set_velocity(velocity)).collect();
         self
     }
     pub fn scale_duration(mut self, factor: u32) -> Self {
-        self.notes = self.notes.clone().into_iter().map(|m| m.duration(m.duration * factor)).collect();
+        self.notes = self.notes.clone().into_iter().map(|m| m.set_duration(m.duration * factor)).collect();
         self
     }
     pub fn reverse(mut self) -> Self {
         self.notes = self.notes.clone().into_iter().rev().collect();
         self
     }
-    pub fn up(mut self, interval: Interval) -> Self {
-        self.notes = self.notes.clone().into_iter().map(|m| m.up(interval)).collect();
+    pub fn transpose_up(mut self, interval: Interval) -> Self {
+        self.notes = self.notes.clone().into_iter().map(|m| m.transpose_up(interval)).collect();
         self
     }
-    pub fn down(mut self, interval: Interval) -> Self {
-        self.notes = self.notes.clone().into_iter().map(|m| m.down(interval)).collect();
+    pub fn transpose_down(mut self, interval: Interval) -> Self {
+        self.notes = self.notes.clone().into_iter().map(|m| m.transpose_down(interval)).collect();
         self
     }
 }
