@@ -9,15 +9,14 @@ use crossbeam::channel::{bounded, Receiver, Sender};
 use ctrlc;
 use midir::{MidiOutput, MidiOutputConnection, MidiOutputPort};
 
-use musicbox::{Bpm, FixedSequence, Interval, Midi, Midibox, Note, Player, PlayingNote, Tone};
+use musicbox::{Bpm, FixedSequence, Midi, Midibox, Player, PlayingNote, Tone};
 use musicbox::Interval::{Maj10, Oct, Perf5};
 
 const NOTE_ON_MSG: u8 = 0x90;
 const NOTE_OFF_MSG: u8 = 0x80;
-const VELOCITY: u8 = 100;
 
 fn main() {
-    let roots = vec![
+    let roots_seq = FixedSequence::new(vec![
         Tone::C.midi(4),
         Midi::rest(),
         Midi::rest(),
@@ -50,10 +49,13 @@ fn main() {
         Tone::C.midi(3),
         Midi::rest(),
         Midi::rest(),
-    ];
-    println!("Sequence length: {}", roots.len());
+    ])
+        .velocity(50)
+        .down(Oct);
 
-    let arp = vec![
+    println!("Sequence length: {}", roots_seq.len());
+
+    let arp_seq = FixedSequence::new(vec![
         Tone::E.midi(5),
         Tone::B.midi(4),
         Tone::C.midi(5),
@@ -62,31 +64,22 @@ fn main() {
         Tone::A.midi(4),
         Tone::A.midi(4),
         Tone::E.midi(4),
-    ];
-
-    let roots_seq = FixedSequence::new(roots.clone())
-        .velocity(Some(50))
-        .down(Oct)
-        .duration(1);
-
-    let arp_seq = FixedSequence::new(arp.clone())
-        .velocity(Some(50))
+    ])
+        .velocity(75)
         .duration(4);
 
-    let sequences : Vec<Arc<dyn Midibox>> = vec![
+    match run(500, vec![
         Arc::new(roots_seq.clone()),
         Arc::new(roots_seq.clone().up(Perf5)),
         Arc::new(roots_seq.clone().up(Maj10)),
         Arc::new(arp_seq.clone()),
         Arc::new(arp_seq.clone()
-            .velocity(Some(5))
+            .velocity(5)
             .down(Oct)
             .fast_forward(1)
             .duration(9)
         ),
-    ];
-
-    match run(500, sequences) {
+    ]) {
         Ok(_) => (),
         Err(err) => println!("Error: {}", err)
     }
@@ -99,9 +92,9 @@ fn spawn_sequence(
     running: &Arc<AtomicCell<bool>>,
     starting_line: &Arc<Barrier>,
     sequence: &Arc<dyn Midibox>
-) -> Receiver<Vec<Note>> {
+) -> Receiver<Vec<Midi>> {
     let (note_tx, note_rx)
-        : (Sender<Vec<Note>>, Receiver<Vec<Note>>) = bounded(1024);
+        : (Sender<Vec<Midi>>, Receiver<Vec<Midi>>) = bounded(1024);
     let barrier = Arc::clone(&starting_line);
     let to_run = Arc::clone(&running);
     let midibox = sequence.clone();
@@ -164,7 +157,7 @@ fn run(bpm: u32, sequences: Vec<Arc<dyn Midibox>>) -> Result<(), Box<dyn Error>>
     // channel to transmit messages from the Player to the MIDI device
     let (raw_midi_tx, raw_midi_rx): (Sender<[u8; 3]>, Receiver<[u8; 3]>) = bounded(1024);
 
-    // true when the player is done accepting input and has send NOTE OFF for all playing notes
+    // true when the player is done accepting input and has sent NOTE OFF for all playing notes
     let device_cleanup_finished = Arc::clone(&clean_up_finished);
     thread::spawn(move || {
         println!("MIDI Device Starting.");
@@ -221,11 +214,11 @@ fn run(bpm: u32, sequences: Vec<Arc<dyn Midibox>>) -> Result<(), Box<dyn Error>>
 }
 
 fn send_note_to_device(raw_midi_tx: &Sender<[u8; 3]>, playing: PlayingNote, midi_status: u8) {
-    match playing.note.pitch {
+    match playing.note.u8_maybe() {
         None => { /* resting */ }
         Some(v) => {
             raw_midi_tx
-                .send([midi_status, v, playing.note.velocity.unwrap_or(VELOCITY)])
+                .send([midi_status, v, playing.note.velocity])
                 .expect("Failed to send note!")
         }
     }

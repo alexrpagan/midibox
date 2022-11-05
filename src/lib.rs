@@ -26,7 +26,7 @@ impl Bpm {
 }
 
 pub trait Midibox: Send + Sync {
-    fn iter(&self) -> Box<dyn Iterator<Item = Note> + '_>;
+    fn iter(&self) -> Box<dyn Iterator<Item = Midi> + '_>;
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -74,56 +74,71 @@ impl Interval {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Midi {
     pub tone: Tone,
-    pub oct: u8
+    pub oct: u8,
+    pub velocity: u8,
+    pub duration: u32,
 }
 
 impl Midi {
     pub fn rest() -> Self {
-        return Midi {
-            tone: Tone::Rest,
-            oct: 0
-        }
+        return Midi { tone: Tone::Rest, oct: 0, velocity: 0, duration: 1 }
     }
 
-    pub fn oct(val: u8) -> u8{
+    pub fn oct(val: u8) -> u8 {
         (val / 12) - 1
     }
 
     pub fn from_option(val: Option<u8>) -> Midi {
         match val {
-            None => Midi { tone: Tone::Rest, oct: 0 },
-            Some(v) => Midi { tone: Tone::from(v), oct: Midi::oct(v) }
+            None => Midi::rest(),
+            Some(v) => Midi::from(v)
         }
     }
-    pub fn from(val: u8) -> Midi {
-        return Midi {
-            tone: Tone::from(val),
-            oct: Midi::oct(val)
-        };
+
+    pub fn from_tone(tone: Tone, oct: u8) -> Midi {
+        return Midi { tone, oct, velocity: 100, duration: 1 }
     }
 
-    pub fn u8(&self) -> Option<u8> {
+    pub fn from(val: u8) -> Midi {
+        return Midi::from_tone(Tone::from(val), Midi::oct(val));
+    }
+
+    pub fn u8_maybe(&self) -> Option<u8> {
         self.tone.u8(self.oct)
     }
 
-    pub fn up(&self, interval: Interval) -> Self {
-        match self.u8().map(|v| v + interval.steps()) {
-            None => Midi::rest(),
-            Some(v) => Midi::from(v)
+    pub fn velocity(&self, velocity: u8) -> Self {
+        return Midi { tone: self.tone, oct: self.oct, velocity, duration: self.duration };
+    }
+
+    pub fn duration(&self, duration: u32) -> Self {
+        return Midi { tone: self.tone, oct: self.oct, velocity: self.velocity, duration };
+    }
+
+    pub fn pitch_u8(&self, val: Option<u8>) -> Self {
+        match val {
+            None => self.pitch(Tone::Rest, 0),
+            Some(v) => self.pitch(Tone::from(v), Midi::oct(v))
         }
     }
+
+    pub fn pitch(&self, tone: Tone, oct: u8) -> Self {
+        return Midi { tone, oct, velocity: self.velocity, duration: self.duration }
+    }
+
+    pub fn up(&self, interval: Interval) -> Self {
+        self.pitch_u8(self.u8_maybe().map(|v| v + interval.steps()))
+    }
+
     pub fn down(&self, interval: Interval) -> Self {
-        match self.u8().map(|v| v - interval.steps()) {
-            None => Midi::rest(),
-            Some(v) => Midi::from(v)
-        }
+        self.pitch_u8(self.u8_maybe().map(|v| v - interval.steps()))
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Tone {
     Rest,
     C,
@@ -141,12 +156,6 @@ pub enum Tone {
 }
 
 impl Tone {
-    pub fn from_option(val: Option<u8>) -> Tone {
-        match val {
-            None => Tone::Rest,
-            Some(v) => Tone::from(v)
-        }
-    }
     pub fn from(val: u8) -> Tone {
         let pos = val % 12;
         match pos {
@@ -163,17 +172,6 @@ impl Tone {
             10 => Tone::Bb,
             11 => Tone::B,
             _ => Tone::Rest
-        }
-    }
-
-    pub fn get(&self) -> Midi {
-        return self.midi(4);
-    }
-
-    pub fn midi(&self, oct: u8) -> Midi {
-        return Midi {
-            tone: self.clone(),
-            oct
         }
     }
 
@@ -195,19 +193,21 @@ impl Tone {
             Tone::Rest => { None }
         }
     }
+
+    pub fn get(&self) -> Midi {
+        return self.midi(4);
+    }
+
+    pub fn midi(&self, oct: u8) -> Midi {
+        return Midi::from_tone(self.clone(), oct);
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct FixedSequence {
     /// The notes that can be produced by a sequence
     notes: Vec<Midi>,
-    /// The velocity to use for notes produced by this sequence
-    velocity: Option<u8>,
-    /// How long to hold each note in discrete metronome ticks
-    duration: u32,
-    /// The index of the play head into note_values. Note that `next()` will increment this, so
-    /// when initialized, this value _not_ the first note that will play of the sequence.
-    /// TODO: Consider changing this behavior.
+    /// The index of the play head into notes
     head_position: usize,
 }
 
@@ -215,21 +215,26 @@ impl FixedSequence {
     pub fn new(notes: Vec<Midi>) -> Self {
         return FixedSequence {
             notes,
-            velocity: None,
-            duration: 1,
             head_position: 0,
         }
+    }
+    pub fn len(&self) -> usize {
+        self.notes.len()
     }
     pub fn fast_forward(mut self, ticks: usize) -> Self {
         self.head_position = (self.head_position + ticks) % self.notes.len();
         self
     }
-    pub fn duration(mut self, ticks: u32) -> Self {
-        self.duration = ticks;
+    pub fn duration(mut self, duration: u32) -> Self {
+        self.notes = self.notes.clone().into_iter().map(|m| m.duration(duration)).collect();
         self
     }
-    pub fn velocity(mut self, velocity: Option<u8>) -> Self {
-        self.velocity = velocity;
+    pub fn velocity(mut self, velocity: u8) -> Self {
+        self.notes = self.notes.clone().into_iter().map(|m| m.velocity(velocity)).collect();
+        self
+    }
+    pub fn scale_duration(mut self, factor: u32) -> Self {
+        self.notes = self.notes.clone().into_iter().map(|m| m.duration(m.duration * factor)).collect();
         self
     }
     pub fn reverse(mut self) -> Self {
@@ -247,32 +252,21 @@ impl FixedSequence {
 }
 
 impl Midibox for FixedSequence {
-    fn iter(&self) -> Box<dyn Iterator<Item = Note> + '_> {
+    fn iter(&self) -> Box<dyn Iterator<Item = Midi> + '_> {
         return Box::new(
             self.notes
                 .iter()
-                .map(|pitch| Note {
-                    pitch: pitch.u8(),
-                    velocity: self.velocity,
-                    duration: self.duration
-                })
+                .map(|m| *m)
                 .cycle()
                 .skip(self.head_position));
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Note {
-    pub pitch: Option<u8>,
-    pub velocity: Option<u8>,
-    pub duration: u32,
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct PlayingNote {
     pub channel_id: usize,
     pub start_tick_id: u64,
-    pub note: Note,
+    pub note: Midi,
 }
 
 #[derive(Debug, Clone)]
@@ -280,14 +274,14 @@ pub struct Player {
     tick_duration: Duration,
     tick_id: u64,
     note_id: u64,
-    channels: Vec<Receiver<Vec<Note>>>,
+    channels: Vec<Receiver<Vec<Midi>>>,
     playing_notes: HashMap<u64, PlayingNote>
 }
 
 impl Player {
     pub fn new(
         meter: Box<dyn Meter>,
-        channels: Vec<Receiver<Vec<Note>>>
+        channels: Vec<Receiver<Vec<Midi>>>
     ) -> Self {
         Player {
             tick_duration: meter.tick_duration(),
@@ -394,7 +388,7 @@ impl Player {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Tone};
+    use crate::Tone;
 
     #[test]
     fn tone() {
