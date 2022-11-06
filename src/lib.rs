@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::ops::{Add, Mul, Sub};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -147,6 +148,30 @@ impl Midi {
     }
 }
 
+impl Add<Interval> for Midi {
+    type Output = Midi;
+
+    fn add(self, rhs: Interval) -> Self::Output {
+        return self.transpose_up(rhs);
+    }
+}
+
+impl Sub<Interval> for Midi {
+    type Output = Midi;
+
+    fn sub(self, rhs: Interval) -> Self::Output {
+        return self.transpose_down(rhs);
+    }
+}
+
+impl Mul<u32> for Midi {
+    type Output = Midi;
+
+    fn mul(self, rhs: u32) -> Self::Output {
+        return self.clone().set_duration(self.duration * rhs)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Tone {
     Rest,
@@ -227,36 +252,99 @@ impl FixedSequence {
             head_position: 0,
         }
     }
+
+    pub fn empty() -> Self {
+        return FixedSequence {
+            notes: Vec::new(),
+            head_position: 0,
+        }
+    }
+
     pub fn len(&self) -> usize {
         self.notes.len()
     }
+
+    pub fn len_ticks(&self) -> u32 {
+        self.notes.clone().into_iter().map(|m| m.duration).sum()
+    }
+
     pub fn fast_forward(mut self, ticks: usize) -> Self {
         self.head_position = (self.head_position + ticks) % self.notes.len();
         self
     }
+
     pub fn duration(mut self, duration: u32) -> Self {
         self.notes = self.notes.clone().into_iter().map(|m| m.set_duration(duration)).collect();
         self
     }
+
     pub fn velocity(mut self, velocity: u8) -> Self {
         self.notes = self.notes.clone().into_iter().map(|m| m.set_velocity(velocity)).collect();
         self
     }
+
     pub fn scale_duration(mut self, factor: u32) -> Self {
-        self.notes = self.notes.clone().into_iter().map(|m| m.set_duration(m.duration * factor)).collect();
+        self.notes = self.notes.clone().into_iter().map(|m| m * factor).collect();
         self
     }
+
+    pub fn extend(mut self, rhs: Self) -> Self {
+        let mut extend = self.notes.clone();
+        extend.append(&mut rhs.notes.clone());
+        self.notes = extend;
+        self
+    }
+
+    pub fn repeat(mut self, times: usize) -> Self {
+        self.notes = self.notes.repeat(times);
+        self
+    }
+
     pub fn reverse(mut self) -> Self {
         self.notes = self.notes.clone().into_iter().rev().collect();
         self
     }
+
     pub fn transpose_up(mut self, interval: Interval) -> Self {
-        self.notes = self.notes.clone().into_iter().map(|m| m.transpose_up(interval)).collect();
+        self.notes = self.notes.clone().into_iter().map(|m| m + interval).collect();
         self
     }
+
     pub fn transpose_down(mut self, interval: Interval) -> Self {
-        self.notes = self.notes.clone().into_iter().map(|m| m.transpose_down(interval)).collect();
+        self.notes = self.notes.clone().into_iter().map(|m| m - interval).collect();
         self
+    }
+}
+
+impl Add<FixedSequence> for FixedSequence {
+    type Output = FixedSequence;
+
+    fn add(self, rhs: FixedSequence) -> Self::Output {
+        return self.clone().extend(rhs)
+    }
+}
+
+impl Mul<usize> for FixedSequence {
+    type Output = FixedSequence;
+
+    fn mul(self, rhs: usize) -> Self::Output {
+        self.clone().repeat(rhs)
+    }
+}
+
+impl Sub<Interval> for FixedSequence {
+    type Output = FixedSequence;
+
+    fn sub(self, rhs: Interval) -> Self::Output {
+        return self.transpose_down(rhs);
+    }
+}
+
+impl Add<Interval> for FixedSequence {
+    type Output = FixedSequence;
+
+    fn add(self, rhs: Interval) -> Self::Output {
+        return self.transpose_up(rhs)
     }
 }
 

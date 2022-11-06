@@ -16,69 +16,38 @@ const NOTE_ON_MSG: u8 = 0x90;
 const NOTE_OFF_MSG: u8 = 0x80;
 
 fn main() {
-    let roots_seq = FixedSequence::new(vec![
-        Tone::C.oct(4),
-        Midi::rest(),
-        Midi::rest(),
-        Midi::rest(),
-        Midi::rest(),
-        Midi::rest(),
-        Tone::C.oct(4),
-        Tone::C.oct(4),
-        Tone::G.oct(3),
-        Midi::rest(),
-        Midi::rest(),
-        Tone::G.oct(3),
-        Midi::rest(),
-        Midi::rest(),
-        Tone::G.oct(3),
-        Midi::rest(),
-        Tone::F.oct(3),
-        Midi::rest(),
-        Midi::rest(),
-        Tone::F.oct(3),
-        Midi::rest(),
-        Midi::rest(),
-        Tone::F.oct(3),
-        Midi::rest(),
-        Midi::rest(),
-        Midi::rest(),
-        Midi::rest(),
-        Midi::rest(),
-        Midi::rest(),
-        Tone::C.oct(3),
-        Midi::rest(),
-        Midi::rest(),
-    ])
-        .velocity(50)
-        .transpose_down(Oct);
+    let s1 = FixedSequence::new(vec![
+        Tone::C.oct(5) * 8,
+        Tone::A.oct(4) * 12,
+        Tone::E.oct(4) * 8,
+        Tone::C.oct(4) * 12,
+    ]);
 
-    println!("Sequence length: {}", roots_seq.len());
+    let s2 = FixedSequence::new(vec![
+        Tone::C.oct(5) * 8,
+        Tone::E.oct(5) * 12,
+        Tone::G.oct(4) * 8,
+        Tone::A.oct(4) * 12,
+    ]);
 
-    let arp_seq = FixedSequence::new(vec![
-        Tone::E.oct(5),
-        Tone::B.oct(4),
-        Tone::C.oct(5),
-        Tone::G.oct(4),
-        Tone::B.oct(4),
-        Tone::A.oct(4),
-        Tone::A.oct(4),
-        Tone::E.oct(4),
-    ])
-        .velocity(75)
-        .duration(4);
+    let s3 = FixedSequence::new(vec![
+        Tone::C.oct(4) * 8,
+        Tone::A.oct(4) * 12,
+        Tone::E.oct(4) * 8,
+        Tone::F.oct(4) * 12,
+    ]);
+
+    assert_eq!(s1.len_ticks(), 40);
+    assert_eq!(s2.len_ticks(), 40);
+    assert_eq!(s3.len_ticks(), 40);
+
+    let descending_5ths = FixedSequence::empty()
+        + (s1.repeat(2) + s2 + s3)
+        .scale_duration(2);
 
     match run(500, vec![
-        Arc::new(roots_seq.clone()),
-        Arc::new(roots_seq.clone().transpose_up(Perf5)),
-        Arc::new(roots_seq.clone().transpose_up(Maj10)),
-        Arc::new(arp_seq.clone()),
-        Arc::new(arp_seq.clone()
-            .velocity(5)
-            .transpose_down(Oct)
-            .fast_forward(1)
-            .duration(9)
-        ),
+        Arc::new(descending_5ths.clone() - Oct),
+        Arc::new(descending_5ths.clone() + Perf5),
     ]) {
         Ok(_) => (),
         Err(err) => println!("Error: {}", err)
