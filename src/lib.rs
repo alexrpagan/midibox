@@ -30,7 +30,99 @@ pub trait Midibox: Send + Sync {
     fn iter(&self) -> Box<dyn Iterator<Item = Midi> + '_>;
 }
 
-#[derive(Debug, Clone, Copy)]
+
+#[derive(Debug, Clone)]
+pub struct Scale {
+    root: Tone,
+    intervals: Vec<u8>,
+}
+
+impl Scale {
+    pub fn major(root: Tone) -> Self {
+        return Scale {
+            root,
+            intervals: vec![
+                2,
+                2,
+                1,
+                2,
+                2,
+                2,
+                1
+            ]
+        }
+    }
+
+    pub fn tones(&self) -> Vec<Tone> {
+        self.midi(4).into_iter().map(|m| m.tone).collect()
+    }
+
+    pub fn midi(&self, oct: u8) -> Vec<Midi> {
+        let mut midi = Vec::new();
+        midi.push(self.root.oct(oct));
+        for interval in self.intervals.clone().into_iter().take(self.intervals.len() - 1) {
+            midi.push(Midi::from_option(
+                midi.last().unwrap().u8_maybe().map(|v| v + interval)
+            ))
+        }
+        return midi;
+    }
+
+    pub fn harmonize(&self, midi: Midi, harmonize: Harmonize) -> Option<Midi> {
+        let tones = self.tones();
+        let degree_maybe = tones.into_iter().position(|t| t.eq(&midi.tone));
+        return match degree_maybe {
+            None => None,
+            Some(pos) => {
+                let steps_to_raise: u8 = self.intervals
+                    .clone()
+                    .into_iter()
+                    .cycle()
+                    .skip(pos)
+                    .take(harmonize.steps())
+                    .sum();
+                let new = Midi::from_option(midi.u8_maybe().map(|v| v + steps_to_raise));
+                return Some(midi.set_pitch(
+                    new.tone,
+                    new.oct
+                ));
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Harmonize {
+    Unison,
+    Second,
+    Third,
+    Fourth,
+    Fifth,
+    Sixth,
+    Seventh,
+    Octave,
+    Ninth,
+    Tenth,
+}
+
+impl Harmonize {
+    fn steps(&self) -> usize {
+        return match self {
+            Harmonize::Unison => 0,
+            Harmonize::Second => 1,
+            Harmonize::Third => 2,
+            Harmonize::Fourth => 3,
+            Harmonize::Fifth => 4,
+            Harmonize::Sixth => 5,
+            Harmonize::Seventh => 6,
+            Harmonize::Octave => 7,
+            Harmonize::Ninth => 8,
+            Harmonize::Tenth => 9,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Interval {
     Unison,
     Min2,
@@ -114,6 +206,13 @@ impl Midi {
 
     pub fn from(val: u8) -> Midi {
         return Midi::from_tone(Tone::from(val), Midi::oct(val));
+    }
+
+    pub fn is_rest(&self) -> bool {
+        return match self.tone {
+            Tone::Rest => true,
+            _ => false
+        }
     }
 
     pub fn u8_maybe(&self) -> Option<u8> {
@@ -265,7 +364,7 @@ impl FixedSequence {
     }
 
     pub fn len_ticks(&self) -> u32 {
-        self.notes.clone().into_iter().map(|m| m.duration).sum()
+        return self.notes.clone().into_iter().map(|m| m.duration).sum()
     }
 
     pub fn fast_forward(mut self, ticks: usize) -> Self {
@@ -274,22 +373,22 @@ impl FixedSequence {
     }
 
     pub fn duration(mut self, duration: u32) -> Self {
-        self.notes = self.notes.clone().into_iter().map(|m| m.set_duration(duration)).collect();
+        self.notes = self.notes.into_iter().map(|m| m.set_duration(duration)).collect();
         self
     }
 
     pub fn velocity(mut self, velocity: u8) -> Self {
-        self.notes = self.notes.clone().into_iter().map(|m| m.set_velocity(velocity)).collect();
+        self.notes = self.notes.into_iter().map(|m| m.set_velocity(velocity)).collect();
         self
     }
 
     pub fn scale_duration(mut self, factor: u32) -> Self {
-        self.notes = self.notes.clone().into_iter().map(|m| m * factor).collect();
+        self.notes = self.notes.into_iter().map(|m| m * factor).collect();
         self
     }
 
     pub fn extend(mut self, rhs: Self) -> Self {
-        let mut extend = self.notes.clone();
+        let mut extend = self.notes;
         extend.append(&mut rhs.notes.clone());
         self.notes = extend;
         self
@@ -301,18 +400,51 @@ impl FixedSequence {
     }
 
     pub fn reverse(mut self) -> Self {
-        self.notes = self.notes.clone().into_iter().rev().collect();
+        self.notes = self.notes.into_iter().rev().collect();
         self
     }
 
     pub fn transpose_up(mut self, interval: Interval) -> Self {
-        self.notes = self.notes.clone().into_iter().map(|m| m + interval).collect();
+        self.notes = self.notes.into_iter().map(|m| m + interval).collect();
         self
     }
 
     pub fn transpose_down(mut self, interval: Interval) -> Self {
-        self.notes = self.notes.clone().into_iter().map(|m| m - interval).collect();
+        self.notes = self.notes.into_iter().map(|m| m - interval).collect();
         self
+    }
+
+    pub fn harmonize(mut self, scale: Scale, harmonize: Harmonize) -> Self {
+        self.notes = self.notes.into_iter()
+            .map(|m| if m.is_rest() {
+                m
+            } else {
+                scale
+                    .harmonize(m, harmonize)
+                    .unwrap_or_else(|| m.set_pitch(Tone::Rest, 4))
+            })
+            .collect();
+        self
+    }
+
+    pub fn mask(mut self, mask: Vec<bool>) -> Self {
+        self.notes = self.notes.into_iter()
+            .zip(mask.into_iter().cycle()).map(|(midi, should_play)| {
+            return if should_play {
+                midi
+            } else {
+                midi.set_pitch(Tone::Rest, 4)
+            }
+        }).collect();
+        self
+    }
+
+    pub fn flatten(mut self) -> Self {
+        self.notes = self.notes.into_iter().flat_map(|m| {
+            let old_duration = m.duration as usize;
+            return vec![m.set_duration(1)].repeat(old_duration).into_iter();
+        }).collect::<Vec<Midi>>();
+        return self;
     }
 }
 
@@ -321,14 +453,6 @@ impl Add<FixedSequence> for FixedSequence {
 
     fn add(self, rhs: FixedSequence) -> Self::Output {
         return self.clone().extend(rhs)
-    }
-}
-
-impl Mul<usize> for FixedSequence {
-    type Output = FixedSequence;
-
-    fn mul(self, rhs: usize) -> Self::Output {
-        self.clone().repeat(rhs)
     }
 }
 
@@ -485,7 +609,7 @@ impl Player {
 
 #[cfg(test)]
 mod tests {
-    use crate::Tone;
+    use crate::{Harmonize, Midi, Scale, Tone};
 
     #[test]
     fn tone() {
@@ -509,5 +633,70 @@ mod tests {
         assert_eq!(Tone::from(60), Tone::C);
         assert_eq!(Tone::from(61), Tone::Db);
         assert_eq!(Tone::from(100), Tone::E);
+    }
+
+    #[test]
+    fn scale() {
+        assert_eq!(
+            Scale::major(Tone::C).midi(4),
+            vec![
+                Tone::C.oct(4),
+                Tone::D.oct(4),
+                Tone::E.oct(4),
+                Tone::F.oct(4),
+                Tone::G.oct(4),
+                Tone::A.oct(4),
+                Tone::B.oct(4),
+            ]
+        );
+        assert_eq!(
+            Scale::major(Tone::D).midi(4),
+            vec![
+                Tone::D.oct(4),
+                Tone::E.oct(4),
+                Tone::Gb.oct(4),
+                Tone::G.oct(4),
+                Tone::A.oct(4),
+                Tone::B.oct(4),
+                Tone::Db.oct(5),
+            ]
+        );
+        assert_eq!(
+            Scale::major(Tone::C).harmonize(
+                Tone::C.oct(4),
+                Harmonize::Sixth
+            ),
+            Some(Tone::A.oct(4))
+        );
+        assert_eq!(
+            Scale::major(Tone::C).harmonize(
+                Tone::B.oct(4),
+                Harmonize::Fifth
+            ),
+            Some(Tone::F.oct(5))
+        );
+        assert_eq!(
+            Scale::major(Tone::C).harmonize(
+                Tone::A.oct(5),
+                Harmonize::Tenth
+            ),
+            Some(Tone::C.oct(7))
+        );
+        assert_eq!(
+            Scale::major(Tone::C).harmonize(
+                Tone::A.oct(5),
+                Harmonize::Tenth
+            ),
+            Some(Tone::C.oct(7))
+        );
+
+        assert_eq!(
+            Scale::major(Tone::C).harmonize(
+                Tone::A.oct(5),
+                Harmonize::Second
+            ),
+            Some(Tone::B.oct(5))
+        )
+
     }
 }

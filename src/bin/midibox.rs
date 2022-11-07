@@ -9,13 +9,15 @@ use crossbeam::channel::{bounded, Receiver, Sender};
 use ctrlc;
 use midir::{MidiOutput, MidiOutputConnection, MidiOutputPort};
 
-use musicbox::{Bpm, FixedSequence, Midi, Midibox, Player, PlayingNote, Tone};
+use musicbox::{Bpm, FixedSequence, Harmonize, Midi, Midibox, Player, PlayingNote, Scale, Tone};
 use musicbox::Interval::{Maj10, Oct, Perf5};
 
 const NOTE_ON_MSG: u8 = 0x90;
 const NOTE_OFF_MSG: u8 = 0x80;
 
 fn main() {
+    let scale = Scale::major(Tone::C);
+
     let s1 = FixedSequence::new(vec![
         Tone::C.oct(5) * 8,
         Tone::A.oct(4) * 12,
@@ -26,7 +28,7 @@ fn main() {
     let s2 = FixedSequence::new(vec![
         Tone::C.oct(5) * 8,
         Tone::E.oct(5) * 12,
-        Tone::G.oct(4) * 8,
+        Tone::D.oct(4) * 8,
         Tone::A.oct(4) * 12,
     ]);
 
@@ -45,9 +47,36 @@ fn main() {
         + (s1.repeat(2) + s2 + s3)
         .scale_duration(2);
 
-    match run(500, vec![
-        Arc::new(descending_5ths.clone() - Oct),
-        Arc::new(descending_5ths.clone() + Perf5),
+    match run(300, vec![
+        Arc::new(descending_5ths.clone()
+            .velocity(75)
+            .flatten()
+            .mask(vec![true, true, false, false, true, true, false, true]) - Oct - Oct
+        ),
+        Arc::new(descending_5ths.clone() - Oct + Perf5),
+        Arc::new(descending_5ths.clone()
+            .velocity(75)
+            .flatten()
+            .mask(vec![true, false, false, false]) - Oct
+        ),
+        Arc::new(descending_5ths.clone()
+            .velocity(50)
+            .harmonize(scale.clone(), Harmonize::Tenth)
+            .flatten()
+            .mask(vec![false, true, false, false, false])
+        ),
+        Arc::new(descending_5ths.clone()
+            .velocity(45)
+            .harmonize(scale.clone(), Harmonize::Seventh)
+            .flatten()
+            .mask(vec![false, false, false, true, false])
+        ),
+        Arc::new(descending_5ths.clone()
+            .velocity(10)
+            .flatten()
+            .mask(vec![false, false, true])
+            + Perf5 - Oct
+        ),
     ]) {
         Ok(_) => (),
         Err(err) => println!("Error: {}", err)
