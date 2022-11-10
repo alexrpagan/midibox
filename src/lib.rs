@@ -103,6 +103,9 @@ pub enum Harmonize {
     Octave,
     Ninth,
     Tenth,
+    Eleventh,
+    Twelveth,
+    Thirteenth,
 }
 
 impl Harmonize {
@@ -118,6 +121,9 @@ impl Harmonize {
             Harmonize::Octave => 7,
             Harmonize::Ninth => 8,
             Harmonize::Tenth => 9,
+            Harmonize::Eleventh => 10,
+            Harmonize::Twelveth => 11,
+            Harmonize::Thirteenth => 12
         }
     }
 }
@@ -414,7 +420,7 @@ impl FixedSequence {
         self
     }
 
-    pub fn harmonize(mut self, scale: Scale, harmonize: Harmonize) -> Self {
+    pub fn harmonize(mut self, scale: &Scale, harmonize: Harmonize) -> Self {
         self.notes = self.notes.into_iter()
             .map(|m| if m.is_rest() {
                 m
