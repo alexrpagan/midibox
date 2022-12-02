@@ -42,13 +42,13 @@ impl Scale {
         return Scale {
             root,
             intervals: vec![
-                2,
-                2,
-                1,
-                2,
-                2,
-                2,
-                1
+                2, // Whole step
+                2, // W
+                1, // Half step
+                2, // W
+                2, // W
+                2, // W
+                1  // H
             ]
         }
     }

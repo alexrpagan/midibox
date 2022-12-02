@@ -10,38 +10,84 @@ use ctrlc;
 use midir::{MidiOutput, MidiOutputConnection, MidiOutputPort};
 
 use musicbox::{Bpm, FixedSequence, Harmonize, Midi, Midibox, Player, PlayingNote, Scale, Tone};
-use musicbox::Interval::{Oct, Perf5};
+use musicbox::Interval::{Min3, Oct, Perf5};
 
 const NOTE_ON_MSG: u8 = 0x90;
 const NOTE_OFF_MSG: u8 = 0x80;
 
 fn main() {
-    let scale = Scale::major(Tone::E);
+    let scale1 = Scale::major(Tone::G);
+    let scale2 = Scale::major(Tone::C);
 
     let s1 = FixedSequence::new(vec![
-        Tone::E.oct(4)  * 16 * 2,
-        Tone::B.oct(3)  * 16 * 2,
-        Tone::E.oct(4)  * 16 * 2,
-        Tone::Ab.oct(3) * 8 * 2,
-        Tone::B.oct(3)  * 8 * 2
+        Tone::E.oct(4)  * 16,
+        Tone::A.oct(3)  * 16,
+        Tone::B.oct(3)  * 16,
     ]);
 
+    let s2 = FixedSequence::new(vec![
+        Tone::F.oct(3)  * 16
+    ]);
+
+    let s3 = FixedSequence::new(vec![
+        Tone::C.oct(3)  * 16
+    ]);
+
+    let low  : Vec<bool> = vec![true,  false, false, false, true, true, false, true, false, false, false, true, false, true, false, false];
+    let high : Vec<bool> = low.clone().into_iter().map(|x| !x).collect();
+
     match run(400, vec![
+        ((s1.clone() + s2.clone() + s1.clone() + s3.clone()).velocity(70) - Oct - Oct)
+            .flatten().mask(low.clone())
+        ,
         (s1.clone().velocity(70) - Oct - Oct)
-            .flatten().mask(vec![true,  false, false])
+            .harmonize(&scale1, Harmonize::Third)
+            .flatten().mask(low.clone())
+            +
+            (s2.clone().velocity(70) - Oct - Oct)
+                .harmonize(&scale2, Harmonize::Third)
+                .flatten().mask(low.clone())
+            +
+            (s1.clone().velocity(70) - Oct - Oct)
+                .harmonize(&scale1, Harmonize::Third)
+                .flatten().mask(low.clone())
+            +
+            (s3.clone().velocity(70) - Oct - Oct)
+                .harmonize(&scale2, Harmonize::Third)
+                .flatten().mask(low.clone())
         ,
-        (s1.clone().velocity(45) - Oct - Oct)
-            .harmonize(&scale, Harmonize::Fifth)
-            .flatten().mask(vec![false, false, true])
+        ((s1.clone().velocity(70) - Oct - Oct)
+            .flatten().mask(high.clone())
+            .harmonize(&scale1, Harmonize::Fifth)
+            +
+            (s2.clone().velocity(70)
+                .harmonize(&scale2, Harmonize::Fourth)
+                .flatten().mask(high.clone()))
+            +
+            (s1.clone().velocity(70) - Oct - Oct)
+                .flatten().mask(high.clone())
+                .harmonize(&scale1, Harmonize::Fifth)
+            +
+            ((s3.clone().velocity(70) - Oct - Oct)
+                .harmonize(&scale2, Harmonize::Fifth)
+                .flatten().mask(high.clone())))
         ,
-        s1.clone().harmonize(&scale, Harmonize::Second).velocity(10)
-            .flatten().mask(vec![false, true, false]),
-        s1.clone().harmonize(&scale, Harmonize::Third).velocity(85)
-            .flatten().mask(vec![false, true,  false, false, false, true,  false]),
-        s1.clone().harmonize(&scale, Harmonize::Fourth).velocity(15)
-            .flatten().mask(vec![true,  false, false, false, false, false, true]),
-        s1.clone().harmonize(&scale, Harmonize::Sixth).velocity(20)
-            .flatten().mask(vec![false, false, false, true]),
+        (s1.clone().velocity(70) - Oct)
+            .flatten().mask(high.clone())
+            .harmonize(&scale1, Harmonize::Seventh)
+            +
+            (s2.clone().velocity(70) - Oct)
+                .harmonize(&scale2, Harmonize::Seventh)
+                .flatten().mask(high.clone())
+            +
+                    (s1.clone().velocity(70) - Oct)
+            .flatten().mask(high.clone())
+            .harmonize(&scale1, Harmonize::Seventh)
+            +
+            (s3.clone().velocity(70) - Oct)
+                .harmonize(&scale2, Harmonize::Seventh)
+                .flatten().mask(high.clone())
+
     ].into_iter().map(|v| -> Arc<dyn Midibox> { Arc::new(v) }).collect()) {
         Ok(_) => (),
         Err(err) => println!("Error: {}", err)
