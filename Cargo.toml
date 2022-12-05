@@ -8,4 +8,8 @@ edition = "2021"
 [dependencies]
 midir = "0.8.0"
 ctrlc = "3.2.3"
+rodio = "0.16.0"
 crossbeam = "0.8.2"
+serde = "1.0"
+serde_yaml = "0.9.16"
+rangemap = "1.2"

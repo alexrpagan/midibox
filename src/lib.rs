@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::ops::{Add, Mul, Sub};
+use std::ops::{Add, Mul, Range, Sub};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -27,7 +27,7 @@ impl Bpm {
 }
 
 pub trait Midibox: Send + Sync {
-    fn iter(&self) -> Box<dyn Iterator<Item = Midi> + '_>;
+    fn iter(&self) -> Box<dyn Iterator<Item = Vec<Midi>> + '_>;
 }
 
 
@@ -68,7 +68,7 @@ impl Scale {
         return midi;
     }
 
-    pub fn harmonize(&self, midi: Midi, harmonize: Harmonize) -> Option<Midi> {
+    pub fn harmonize_up(&self, midi: Midi, harmonize: Degree) -> Option<Midi> {
         let tones = self.tones();
         let degree_maybe = tones.into_iter().position(|t| t.eq(&midi.tone));
         return match degree_maybe {
@@ -89,10 +89,44 @@ impl Scale {
             }
         }
     }
+
+    pub fn harmonize_down(&self, midi: Midi, harmonize: Degree) -> Option<Midi> {
+        let tones = self.tones();
+        let degree_maybe = tones.into_iter().position(|t| t.eq(&midi.tone));
+        return match degree_maybe {
+            None => None,
+            Some(pos) => {
+                let iter = self.intervals
+                    .clone();
+
+                let size = self.intervals.len();
+
+                let scale_at_pos: Vec<u8> = iter
+                    .into_iter()
+                    .cycle()
+                    .skip(pos)
+                    .take(size)
+                    .collect();
+
+                let steps_to_lower: u8 = scale_at_pos
+                    .into_iter()
+                    .rev()
+                    .cycle()
+                    .take(harmonize.steps())
+                    .sum();
+                let new = Midi::from_option(midi.u8_maybe().map(|v| v - steps_to_lower));
+                return Some(midi.set_pitch(
+                    new.tone,
+                    new.oct
+                ));
+            }
+        }
+    }
 }
 
+
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Harmonize {
+pub enum Degree {
     Unison,
     Second,
     Third,
@@ -108,25 +142,26 @@ pub enum Harmonize {
     Thirteenth,
 }
 
-impl Harmonize {
+impl Degree {
     fn steps(&self) -> usize {
         return match self {
-            Harmonize::Unison => 0,
-            Harmonize::Second => 1,
-            Harmonize::Third => 2,
-            Harmonize::Fourth => 3,
-            Harmonize::Fifth => 4,
-            Harmonize::Sixth => 5,
-            Harmonize::Seventh => 6,
-            Harmonize::Octave => 7,
-            Harmonize::Ninth => 8,
-            Harmonize::Tenth => 9,
-            Harmonize::Eleventh => 10,
-            Harmonize::Twelveth => 11,
-            Harmonize::Thirteenth => 12
+            Degree::Unison => 0,
+            Degree::Second => 1,
+            Degree::Third => 2,
+            Degree::Fourth => 3,
+            Degree::Fifth => 4,
+            Degree::Sixth => 5,
+            Degree::Seventh => 6,
+            Degree::Octave => 7,
+            Degree::Ninth => 8,
+            Degree::Tenth => 9,
+            Degree::Eleventh => 10,
+            Degree::Twelveth => 11,
+            Degree::Thirteenth => 12
         }
     }
 }
+
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Interval {
@@ -191,7 +226,7 @@ impl Midi {
             tone: Tone::Rest,
             oct: DEFAULT_OCT,
             velocity: DEFAULT_VELOCITY,
-            duration: DEFAULT_DURATION
+            duration: DEFAULT_DURATION,
         }
     }
 
@@ -393,7 +428,7 @@ impl FixedSequence {
         self
     }
 
-    pub fn extend(mut self, rhs: Self) -> Self {
+    pub fn extend(mut self, rhs: &Self) -> Self {
         let mut extend = self.notes;
         extend.append(&mut rhs.notes.clone());
         self.notes = extend;
@@ -420,13 +455,13 @@ impl FixedSequence {
         self
     }
 
-    pub fn harmonize(mut self, scale: &Scale, harmonize: Harmonize) -> Self {
+    pub fn harmonize(mut self, scale: &Scale, harmonize: Degree) -> Self {
         self.notes = self.notes.into_iter()
             .map(|m| if m.is_rest() {
                 m
             } else {
                 scale
-                    .harmonize(m, harmonize)
+                    .harmonize_up(m, harmonize)
                     .unwrap_or_else(|| m.set_pitch(Tone::Rest, 4))
             })
             .collect();
@@ -458,7 +493,7 @@ impl Add<FixedSequence> for FixedSequence {
     type Output = FixedSequence;
 
     fn add(self, rhs: FixedSequence) -> Self::Output {
-        return self.clone().extend(rhs)
+        return self.clone().extend(&rhs.clone())
     }
 }
 
@@ -479,11 +514,11 @@ impl Add<Interval> for FixedSequence {
 }
 
 impl Midibox for FixedSequence {
-    fn iter(&self) -> Box<dyn Iterator<Item = Midi> + '_> {
+    fn iter(&self) -> Box<dyn Iterator<Item = Vec<Midi>> + '_> {
         return Box::new(
             self.notes
                 .iter()
-                .map(|m| *m)
+                .map(|m| vec![*m])
                 .cycle()
                 .skip(self.head_position));
     }
@@ -615,7 +650,7 @@ impl Player {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Harmonize, Midi, Scale, Tone};
+    use crate::{Degree, Midi, Scale, Tone};
 
     #[test]
     fn tone() {
@@ -667,42 +702,106 @@ mod tests {
                 Tone::Db.oct(5),
             ]
         );
+    }
+
+    #[test]
+    fn harmonize_up() {
         assert_eq!(
-            Scale::major(Tone::C).harmonize(
+            Scale::major(Tone::C).harmonize_up(
                 Tone::C.oct(4),
-                Harmonize::Sixth
+                Degree::Sixth
             ),
             Some(Tone::A.oct(4))
         );
         assert_eq!(
-            Scale::major(Tone::C).harmonize(
+            Scale::major(Tone::C).harmonize_up(
                 Tone::B.oct(4),
-                Harmonize::Fifth
+                Degree::Fifth
             ),
             Some(Tone::F.oct(5))
         );
         assert_eq!(
-            Scale::major(Tone::C).harmonize(
+            Scale::major(Tone::C).harmonize_up(
                 Tone::A.oct(5),
-                Harmonize::Tenth
+                Degree::Tenth
             ),
             Some(Tone::C.oct(7))
         );
         assert_eq!(
-            Scale::major(Tone::C).harmonize(
+            Scale::major(Tone::C).harmonize_up(
                 Tone::A.oct(5),
-                Harmonize::Tenth
+                Degree::Tenth
             ),
             Some(Tone::C.oct(7))
         );
 
         assert_eq!(
-            Scale::major(Tone::C).harmonize(
+            Scale::major(Tone::C).harmonize_up(
                 Tone::A.oct(5),
-                Harmonize::Second
+                Degree::Second
             ),
             Some(Tone::B.oct(5))
         )
+    }
 
+    #[test]
+    fn harmonize_down() {
+        assert_eq!(
+            Scale::major(Tone::C).harmonize_down(
+                Tone::C.oct(4),
+                Degree::Fourth
+            ),
+            Some(Tone::G.oct(3))
+        );
+        assert_eq!(
+            Scale::major(Tone::C).harmonize_down(
+                Tone::C.oct(4),
+                Degree::Second
+            ),
+            Some(Tone::B.oct(3))
+        );
+        assert_eq!(
+            Scale::major(Tone::C).harmonize_down(
+                Tone::C.oct(4),
+                Degree::Third
+            ),
+            Some(Tone::A.oct(3))
+        );
+        assert_eq!(
+            Scale::major(Tone::C).harmonize_down(
+                Tone::C.oct(4),
+                Degree::Tenth
+            ),
+            Some(Tone::A.oct(2))
+        );
+        assert_eq!(
+            Scale::major(Tone::C).harmonize_down(
+                Tone::C.oct(4),
+                Degree::Sixth
+            ),
+            Some(Tone::E.oct(3))
+        );
+
+        assert_eq!(
+            Scale::major(Tone::C).harmonize_down(
+                Tone::F.oct(5),
+                Degree::Fifth
+            ),
+            Some(Tone::B.oct(4))
+        );
+        assert_eq!(
+            Scale::major(Tone::C).harmonize_down(
+                Tone::B.oct(5),
+                Degree::Fifth
+            ),
+            Some(Tone::E.oct(5))
+        );
+        assert_eq!(
+            Scale::major(Tone::C).harmonize_down(
+                Tone::B.oct(5),
+                Degree::Second
+            ),
+            Some(Tone::A.oct(5))
+        )
     }
 }
