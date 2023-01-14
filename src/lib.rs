@@ -96,16 +96,12 @@ impl Scale {
         return match degree_maybe {
             None => None,
             Some(pos) => {
-                let iter = self.intervals
-                    .clone();
-
-                let size = self.intervals.len();
-
-                let scale_at_pos: Vec<u8> = iter
+                let scale_at_pos: Vec<u8> = self.intervals
+                    .clone()
                     .into_iter()
                     .cycle()
                     .skip(pos)
-                    .take(size)
+                    .take(self.intervals.len())
                     .collect();
 
                 let steps_to_lower: u8 = scale_at_pos
@@ -455,13 +451,26 @@ impl FixedSequence {
         self
     }
 
-    pub fn harmonize(mut self, scale: &Scale, harmonize: Degree) -> Self {
+    pub fn harmonize_up(mut self, scale: &Scale, degree: Degree) -> Self {
         self.notes = self.notes.into_iter()
             .map(|m| if m.is_rest() {
                 m
             } else {
                 scale
-                    .harmonize_up(m, harmonize)
+                    .harmonize_up(m, degree)
+                    .unwrap_or_else(|| m.set_pitch(Tone::Rest, 4))
+            })
+            .collect();
+        self
+    }
+
+    pub fn harmonize_down(mut self, scale: &Scale, degree: Degree) -> Self {
+        self.notes = self.notes.into_iter()
+            .map(|m| if m.is_rest() {
+                m
+            } else {
+                scale
+                    .harmonize_down(m, degree)
                     .unwrap_or_else(|| m.set_pitch(Tone::Rest, 4))
             })
             .collect();
