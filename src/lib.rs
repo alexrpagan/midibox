@@ -1,9 +1,19 @@
 use std::collections::HashMap;
-use std::ops::{Add, Mul, Range, Sub};
+use std::error::Error;
+use std::io::{stdin, stdout, Write};
+use std::ops::{Add, Mul, Sub};
+use std::sync::{Arc, Barrier};
+use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
 
-use crossbeam::channel::Receiver;
+use crossbeam::atomic::AtomicCell;
+use crossbeam::channel::{bounded, Receiver, Sender};
+use ctrlc;
+use midir::{MidiOutput, MidiOutputConnection, MidiOutputPort};
+
+pub const NOTE_ON_MSG: u8 = 0x90;
+pub const NOTE_OFF_MSG: u8 = 0x80;
 
 pub trait Meter {
     fn tick_duration(&self) -> Duration;
@@ -11,7 +21,7 @@ pub trait Meter {
 
 #[derive(Debug, Clone)]
 pub struct Bpm {
-    bpm: u32
+    bpm: u32,
 }
 
 impl Meter for Bpm {
@@ -27,7 +37,7 @@ impl Bpm {
 }
 
 pub trait Midibox: Send + Sync {
-    fn iter(&self) -> Box<dyn Iterator<Item = Vec<Midi>> + '_>;
+    fn iter(&self) -> Box<dyn Iterator<Item=Vec<Midi>> + '_>;
 }
 
 
@@ -48,9 +58,9 @@ impl Scale {
                 2, // W
                 2, // W
                 2, // W
-                1  // H
-            ]
-        }
+                1,  // H
+            ],
+        };
     }
 
     pub fn tones(&self) -> Vec<Tone> {
@@ -84,10 +94,10 @@ impl Scale {
                 let new = Midi::from_option(midi.u8_maybe().map(|v| v + steps_to_raise));
                 return Some(midi.set_pitch(
                     new.tone,
-                    new.oct
+                    new.oct,
                 ));
             }
-        }
+        };
     }
 
     pub fn harmonize_down(&self, midi: Midi, harmonize: Degree) -> Option<Midi> {
@@ -113,10 +123,10 @@ impl Scale {
                 let new = Midi::from_option(midi.u8_maybe().map(|v| v - steps_to_lower));
                 return Some(midi.set_pitch(
                     new.tone,
-                    new.oct
+                    new.oct,
                 ));
             }
-        }
+        };
     }
 }
 
@@ -154,7 +164,7 @@ impl Degree {
             Degree::Eleventh => 10,
             Degree::Twelveth => 11,
             Degree::Thirteenth => 12
-        }
+        };
     }
 }
 
@@ -184,22 +194,22 @@ impl Interval {
     pub fn steps(&self) -> u8 {
         match self {
             Interval::Unison => { 0 }
-            Interval::Min2   => { 1 }
-            Interval::Maj2   => { 2 }
-            Interval::Min3   => { 3 }
-            Interval::Maj3   => { 4 }
-            Interval::Perf4  => { 5 }
-            Interval::Flat5  => { 6 }
-            Interval::Perf5  => { 7 }
-            Interval::Min6   => { 8 }
-            Interval::Maj6   => { 9 }
-            Interval::Min7   => { 10 }
-            Interval::Maj7   => { 11 }
-            Interval::Oct    => { 12 }
-            Interval::Min9   => { 13 }
-            Interval::Maj9   => { 14 }
-            Interval::Min10  => { 15 }
-            Interval::Maj10  => { 16 }
+            Interval::Min2 => { 1 }
+            Interval::Maj2 => { 2 }
+            Interval::Min3 => { 3 }
+            Interval::Maj3 => { 4 }
+            Interval::Perf4 => { 5 }
+            Interval::Flat5 => { 6 }
+            Interval::Perf5 => { 7 }
+            Interval::Min6 => { 8 }
+            Interval::Maj6 => { 9 }
+            Interval::Min7 => { 10 }
+            Interval::Maj7 => { 11 }
+            Interval::Oct => { 12 }
+            Interval::Min9 => { 13 }
+            Interval::Maj9 => { 14 }
+            Interval::Min10 => { 15 }
+            Interval::Maj10 => { 16 }
         }
     }
 }
@@ -223,7 +233,7 @@ impl Midi {
             oct: DEFAULT_OCT,
             velocity: DEFAULT_VELOCITY,
             duration: DEFAULT_DURATION,
-        }
+        };
     }
 
     pub fn oct(val: u8) -> u8 {
@@ -238,7 +248,7 @@ impl Midi {
     }
 
     pub fn from_tone(tone: Tone, oct: u8) -> Midi {
-        return Midi { tone, oct, velocity: DEFAULT_VELOCITY, duration: DEFAULT_DURATION }
+        return Midi { tone, oct, velocity: DEFAULT_VELOCITY, duration: DEFAULT_DURATION };
     }
 
     pub fn from(val: u8) -> Midi {
@@ -249,7 +259,7 @@ impl Midi {
         return match self.tone {
             Tone::Rest => true,
             _ => false
-        }
+        };
     }
 
     pub fn u8_maybe(&self) -> Option<u8> {
@@ -272,7 +282,7 @@ impl Midi {
     }
 
     pub fn set_pitch(&self, tone: Tone, oct: u8) -> Self {
-        return Midi { tone, oct, velocity: self.velocity, duration: self.duration }
+        return Midi { tone, oct, velocity: self.velocity, duration: self.duration };
     }
 
     pub fn transpose_up(&self, interval: Interval) -> Self {
@@ -304,7 +314,7 @@ impl Mul<u32> for Midi {
     type Output = Midi;
 
     fn mul(self, rhs: u32) -> Self::Output {
-        return self.clone().set_duration(self.duration * rhs)
+        return self.clone().set_duration(self.duration * rhs);
     }
 }
 
@@ -322,7 +332,7 @@ pub enum Tone {
     Ab,
     A,
     Bb,
-    B
+    B,
 }
 
 impl Tone {
@@ -348,18 +358,18 @@ impl Tone {
     pub fn u8(&self, oct: u8) -> Option<u8> {
         let base = (oct + 1) * 12;
         match self {
-            Tone::C  => { Some(base) }
+            Tone::C => { Some(base) }
             Tone::Db => { Some(base + 1) }
-            Tone::D  => { Some(base + 2) }
+            Tone::D => { Some(base + 2) }
             Tone::Eb => { Some(base + 3) }
-            Tone::E  => { Some(base + 4) }
-            Tone::F  => { Some(base + 5) }
+            Tone::E => { Some(base + 4) }
+            Tone::F => { Some(base + 5) }
             Tone::Gb => { Some(base + 6) }
-            Tone::G  => { Some(base + 7) }
+            Tone::G => { Some(base + 7) }
             Tone::Ab => { Some(base + 8) }
-            Tone::A  => { Some(base + 9) }
+            Tone::A => { Some(base + 9) }
             Tone::Bb => { Some(base + 10) }
-            Tone::B  => { Some(base + 11) }
+            Tone::B => { Some(base + 11) }
             Tone::Rest => { None }
         }
     }
@@ -386,14 +396,14 @@ impl FixedSequence {
         return FixedSequence {
             notes,
             head_position: 0,
-        }
+        };
     }
 
     pub fn empty() -> Self {
         return FixedSequence {
             notes: Vec::new(),
             head_position: 0,
-        }
+        };
     }
 
     pub fn len(&self) -> usize {
@@ -401,7 +411,7 @@ impl FixedSequence {
     }
 
     pub fn len_ticks(&self) -> u32 {
-        return self.notes.clone().into_iter().map(|m| m.duration).sum()
+        return self.notes.clone().into_iter().map(|m| m.duration).sum();
     }
 
     pub fn fast_forward(mut self, ticks: usize) -> Self {
@@ -484,7 +494,7 @@ impl FixedSequence {
                 midi
             } else {
                 midi.set_pitch(Tone::Rest, 4)
-            }
+            };
         }).collect();
         self
     }
@@ -502,7 +512,7 @@ impl Add<FixedSequence> for FixedSequence {
     type Output = FixedSequence;
 
     fn add(self, rhs: FixedSequence) -> Self::Output {
-        return self.clone().extend(&rhs.clone())
+        return self.clone().extend(&rhs.clone());
     }
 }
 
@@ -518,12 +528,12 @@ impl Add<Interval> for FixedSequence {
     type Output = FixedSequence;
 
     fn add(self, rhs: Interval) -> Self::Output {
-        return self.transpose_up(rhs)
+        return self.transpose_up(rhs);
     }
 }
 
 impl Midibox for FixedSequence {
-    fn iter(&self) -> Box<dyn Iterator<Item = Vec<Midi>> + '_> {
+    fn iter(&self) -> Box<dyn Iterator<Item=Vec<Midi>> + '_> {
         return Box::new(
             self.notes
                 .iter()
@@ -546,20 +556,20 @@ pub struct Player {
     tick_id: u64,
     note_id: u64,
     channels: Vec<Receiver<Vec<Midi>>>,
-    playing_notes: HashMap<u64, PlayingNote>
+    playing_notes: HashMap<u64, PlayingNote>,
 }
 
 impl Player {
     pub fn new(
         meter: Box<dyn Meter>,
-        channels: Vec<Receiver<Vec<Midi>>>
+        channels: Vec<Receiver<Vec<Midi>>>,
     ) -> Self {
         Player {
             tick_duration: meter.tick_duration(),
             tick_id: 0,
             note_id: 0,
             channels: channels.clone(),
-            playing_notes: HashMap::new()
+            playing_notes: HashMap::new(),
         }
     }
 
@@ -596,7 +606,7 @@ impl Player {
         // TODO: how to get rid of this clone?
         for (channel_id, note_channel) in self.channels.clone().iter().enumerate() {
             if !self.should_poll_channel(channel_id) {
-                continue
+                continue;
             }
             match note_channel.try_recv() {
                 Ok(notes) => {
@@ -621,7 +631,7 @@ impl Player {
             }
         }
 
-        let mut notes : Vec<PlayingNote> = Vec::new();
+        let mut notes: Vec<PlayingNote> = Vec::new();
         notes.extend(
             self.playing_notes
                 .values()
@@ -634,7 +644,7 @@ impl Player {
     pub fn clear_elapsed_notes(&mut self) -> Vec<PlayingNote> {
         let current_tick = self.tick_id;
         return self.clear_notes(|note| {
-            return note.start_tick_id + (note.note.duration as u64) == current_tick
+            return note.start_tick_id + (note.note.duration as u64) == current_tick;
         });
     }
 
@@ -645,7 +655,7 @@ impl Player {
     fn clear_notes<F>(&mut self, should_clear: F) -> Vec<PlayingNote> where
         F: Fn(&PlayingNote) -> bool
     {
-        let mut notes : Vec<PlayingNote> = Vec::new();
+        let mut notes: Vec<PlayingNote> = Vec::new();
         // TODO: how to get rid of this clone?
         self.playing_notes.clone().iter()
             .filter(|(_, playing)| should_clear(playing.clone()))
@@ -654,6 +664,157 @@ impl Player {
                 self.playing_notes.remove(&note_id);
             });
         notes
+    }
+}
+
+
+pub fn run(bpm: u32, sequences: Vec<Arc<dyn Midibox>>) -> Result<(), Box<dyn Error>> {
+    let midi_out = MidiOutput::new("Midi Outputs")?;
+
+    // Get an output port (read from console if multiple are available)
+    let out_ports = midi_out.ports();
+    let out_port: &MidiOutputPort = match out_ports.len() {
+        0 => return Err("no output port found".into()),
+        1 => {
+            println!("Choosing the only available output port: {}", midi_out.port_name(&out_ports[0]).unwrap());
+            &out_ports[0]
+        }
+        _ => {
+            println!("\nAvailable output ports:");
+            for (i, p) in out_ports.iter().enumerate() {
+                println!("{}: {}", i, midi_out.port_name(p).unwrap());
+            }
+            print!("Please select output port: ");
+            stdout().flush()?;
+            let mut input = String::new();
+            stdin().read_line(&mut input)?;
+            out_ports
+                .get(input.trim().parse::<usize>()?)
+                .ok_or("invalid output port selected")?
+        }
+    };
+
+    // flag to determine whether to keep running (e.g., while looping in sequence / player threads)
+    let running = Arc::new(AtomicCell::new(true));
+    let clean_up_finished = Arc::new(AtomicCell::new(false));
+
+    let mut device_conn = midi_out.connect(out_port, "midibox-out")?;
+
+    // channel to indicate that `main` should exit
+    let (exit_tx, exit_rx) = bounded(1);
+
+    // channel to transmit messages from the Player to the MIDI device
+    let (raw_midi_tx, raw_midi_rx): (Sender<[u8; 3]>, Receiver<[u8; 3]>) = bounded(1024);
+
+    // true when the player is done accepting input and has sent NOTE OFF for all playing notes
+    let device_cleanup_finished = Arc::clone(&clean_up_finished);
+    thread::spawn(move || {
+        println!("MIDI Device Starting.");
+
+        while !device_cleanup_finished.load() {
+            forward_to_midi_device(&raw_midi_rx, &mut device_conn);
+        }
+
+        // drain the channel in case the player sent any note-off messages
+        while !raw_midi_rx.is_empty() {
+            forward_to_midi_device(&raw_midi_rx, &mut device_conn);
+        }
+
+        exit_tx.send(()).expect("Could not send stop signal.");
+        println!("MIDI Device Exiting.");
+    });
+
+    let ctrlc_running = Arc::clone(&running);
+    ctrlc::set_handler(move || ctrlc_running.store(false))?;
+
+    // make sure that all sequence threads have started before starting ticker
+    let starting_line = Arc::new(Barrier::new(sequences.len() + 1));
+    let mut player = Player::new(
+        Bpm::new(bpm),
+        sequences.iter()
+            .map(|seq| spawn_sequence(&running, &starting_line, &seq))
+            .collect(),
+    );
+    starting_line.wait();
+
+    let player_running = Arc::clone(&running);
+    let player_cleanup_finished = Arc::clone(&clean_up_finished);
+    thread::spawn(move || {
+        println!("Player Starting.");
+        while player_running.load() {
+            println!("Time: {}", player.time());
+            for note in player.poll_channels() {
+                send_note_to_device(&raw_midi_tx, note, NOTE_ON_MSG)
+            }
+            player.tick();
+            for note in player.clear_elapsed_notes() {
+                send_note_to_device(&raw_midi_tx, note, NOTE_OFF_MSG)
+            }
+        }
+        for note in player.clear_all_notes() {
+            send_note_to_device(&raw_midi_tx, note, NOTE_OFF_MSG)
+        }
+        player_cleanup_finished.store(true);
+        println!("Player Exiting.");
+    });
+
+    exit_rx.recv()?;
+    Ok(())
+}
+
+/// Launches a thread that feeds notes from the provided sequence into a bounded channel, returning a
+/// receiver that can be used to poll for notes.
+fn spawn_sequence(
+    running: &Arc<AtomicCell<bool>>,
+    starting_line: &Arc<Barrier>,
+    sequence: &Arc<dyn Midibox>,
+) -> Receiver<Vec<Midi>> {
+    let (note_tx, note_rx)
+        : (Sender<Vec<Midi>>, Receiver<Vec<Midi>>) = bounded(1024);
+    let barrier = Arc::clone(&starting_line);
+    let to_run = Arc::clone(&running);
+    let midibox = sequence.clone();
+    thread::spawn(move || {
+        // block until all other sequence threads are ready to start
+        barrier.wait();
+        let mut seq_iter = midibox.iter();
+        println!("Midibox Starting.");
+        while to_run.load() {
+            // TODO: gracefully handle this error instead of `unwrap`
+            let batch = seq_iter.next().unwrap();
+            match note_tx.send(batch) {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("Encountered while sending notes: {}", e);
+                }
+            }
+        }
+        println!("Midibox Exiting.");
+    });
+
+    note_rx
+}
+
+fn send_note_to_device(raw_midi_tx: &Sender<[u8; 3]>, playing: PlayingNote, midi_status: u8) {
+    match playing.note.u8_maybe() {
+        None => { /* resting */ }
+        Some(v) => {
+            raw_midi_tx
+                .send([midi_status, v, playing.note.velocity])
+                .expect("Failed to send note!")
+        }
+    }
+}
+
+fn forward_to_midi_device(
+    raw_midi_rx: &Receiver<[u8; 3]>,
+    device_conn: &mut MidiOutputConnection,
+) {
+    match raw_midi_rx.recv_timeout(Duration::from_secs(30)) {
+        Ok(msg) => {
+            let _ = device_conn.send(&msg);
+        }
+        Err(e) => println!("Error while recieving MIDI data {}", e)
     }
 }
 
@@ -718,28 +879,28 @@ mod tests {
         assert_eq!(
             Scale::major(Tone::C).harmonize_up(
                 Tone::C.oct(4),
-                Degree::Sixth
+                Degree::Sixth,
             ),
             Some(Tone::A.oct(4))
         );
         assert_eq!(
             Scale::major(Tone::C).harmonize_up(
                 Tone::B.oct(4),
-                Degree::Fifth
+                Degree::Fifth,
             ),
             Some(Tone::F.oct(5))
         );
         assert_eq!(
             Scale::major(Tone::C).harmonize_up(
                 Tone::A.oct(5),
-                Degree::Tenth
+                Degree::Tenth,
             ),
             Some(Tone::C.oct(7))
         );
         assert_eq!(
             Scale::major(Tone::C).harmonize_up(
                 Tone::A.oct(5),
-                Degree::Tenth
+                Degree::Tenth,
             ),
             Some(Tone::C.oct(7))
         );
@@ -747,7 +908,7 @@ mod tests {
         assert_eq!(
             Scale::major(Tone::C).harmonize_up(
                 Tone::A.oct(5),
-                Degree::Second
+                Degree::Second,
             ),
             Some(Tone::B.oct(5))
         )
@@ -758,35 +919,35 @@ mod tests {
         assert_eq!(
             Scale::major(Tone::C).harmonize_down(
                 Tone::C.oct(4),
-                Degree::Fourth
+                Degree::Fourth,
             ),
             Some(Tone::G.oct(3))
         );
         assert_eq!(
             Scale::major(Tone::C).harmonize_down(
                 Tone::C.oct(4),
-                Degree::Second
+                Degree::Second,
             ),
             Some(Tone::B.oct(3))
         );
         assert_eq!(
             Scale::major(Tone::C).harmonize_down(
                 Tone::C.oct(4),
-                Degree::Third
+                Degree::Third,
             ),
             Some(Tone::A.oct(3))
         );
         assert_eq!(
             Scale::major(Tone::C).harmonize_down(
                 Tone::C.oct(4),
-                Degree::Tenth
+                Degree::Tenth,
             ),
             Some(Tone::A.oct(2))
         );
         assert_eq!(
             Scale::major(Tone::C).harmonize_down(
                 Tone::C.oct(4),
-                Degree::Sixth
+                Degree::Sixth,
             ),
             Some(Tone::E.oct(3))
         );
@@ -794,21 +955,21 @@ mod tests {
         assert_eq!(
             Scale::major(Tone::C).harmonize_down(
                 Tone::F.oct(5),
-                Degree::Fifth
+                Degree::Fifth,
             ),
             Some(Tone::B.oct(4))
         );
         assert_eq!(
             Scale::major(Tone::C).harmonize_down(
                 Tone::B.oct(5),
-                Degree::Fifth
+                Degree::Fifth,
             ),
             Some(Tone::E.oct(5))
         );
         assert_eq!(
             Scale::major(Tone::C).harmonize_down(
                 Tone::B.oct(5),
-                Degree::Second
+                Degree::Second,
             ),
             Some(Tone::A.oct(5))
         )
