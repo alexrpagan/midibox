@@ -487,6 +487,21 @@ impl FixedSequence {
         self
     }
 
+    /// Splits each note into a series of metronome ticks adding to the note's duration
+    pub fn flatten(mut self) -> Self {
+        self.notes = self.notes.into_iter().flat_map(|m| {
+            let old_duration = m.duration as usize;
+            return vec![m.set_duration(1)].repeat(old_duration).into_iter();
+        }).collect::<Vec<Midi>>();
+        return self;
+    }
+
+    /// mask is a sequence of bits representing notes to play or mute
+    ///
+    /// If the bit corresponding to a note in this sequence is false, the note will be muted.
+    ///
+    /// The mask will be applied starting from the first note of the sequence and will repeat to
+    /// match the total number of notes in this sequence.
     pub fn mask(mut self, mask: Vec<bool>) -> Self {
         self.notes = self.notes.into_iter()
             .zip(mask.into_iter().cycle()).map(|(midi, should_play)| {
@@ -499,12 +514,8 @@ impl FixedSequence {
         self
     }
 
-    pub fn flatten(mut self) -> Self {
-        self.notes = self.notes.into_iter().flat_map(|m| {
-            let old_duration = m.duration as usize;
-            return vec![m.set_duration(1)].repeat(old_duration).into_iter();
-        }).collect::<Vec<Midi>>();
-        return self;
+    pub fn gate(self, mask: Vec<bool>) -> Self {
+        self.flatten().mask(mask)
     }
 }
 
@@ -667,8 +678,14 @@ impl Player {
     }
 }
 
+pub fn run(bpm: u32, sequence: Vec<Arc<dyn Midibox>>) {
+    match try_run(bpm, sequence) {
+        Ok(_) => (),
+        Err(err) => println!("Error: {}", err)
+    }
+}
 
-pub fn run(bpm: u32, sequences: Vec<Arc<dyn Midibox>>) -> Result<(), Box<dyn Error>> {
+pub fn try_run(bpm: u32, sequences: Vec<Arc<dyn Midibox>>) -> Result<(), Box<dyn Error>> {
     let midi_out = MidiOutput::new("Midi Outputs")?;
 
     // Get an output port (read from console if multiple are available)
