@@ -466,6 +466,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "midibox"
+version = "0.1.0"
+dependencies = [
+ "crossbeam",
+ "ctrlc",
+ "midir",
+ "rangemap",
+ "rodio",
+ "serde",
+ "serde_yaml",
+]
+
+[[package]]
 name = "midir"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -506,19 +519,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e21c73734c69dc95696c9ed8926a2b393171d98b3f5f5935686a26a487ab9b90"
 dependencies = [
  "cc",
-]
-
-[[package]]
-name = "musicbox"
-version = "0.1.0"
-dependencies = [
- "crossbeam",
- "ctrlc",
- "midir",
- "rangemap",
- "rodio",
- "serde",
- "serde_yaml",
 ]
 
 [[package]]
