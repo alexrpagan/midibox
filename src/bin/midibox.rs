@@ -1,6 +1,6 @@
 use std::sync::Arc;
-use musicbox::{Degree, FixedSequence, Midibox, Scale, Tone, run};
-use musicbox::Interval::Oct;
+use midibox::{Degree, FixedSequence, Midibox, Scale, Tone, run};
+use midibox::Interval::Oct;
 
 fn main() {
     let c_maj = Scale::major(Tone::C);
