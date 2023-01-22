@@ -1,6 +1,7 @@
-use std::sync::Arc;
-use midibox::{Degree, FixedSequence, Midibox, Scale, Tone, run};
+use midibox::{Bpm, Degree, Scale, Tone};
+use midibox::sequences::FixedSequence;
 use midibox::Interval::Oct;
+use midibox::player::run;
 
 fn main() {
     let c_maj = Scale::major(Tone::C);
@@ -24,10 +25,11 @@ fn main() {
         Tone::C.oct(4)  * 16,
     ]);
 
-    run(300, vec![
+    run(Bpm::new(300), vec![
         s1.clone()
             .velocity(70)
-            .transpose_down(Oct).split_notes(vec![true, false, true, true, false, true, false, true]),
+            .transpose_down(Oct)
+            .split_notes(vec![true, false, true, true, false, true, false, true]),
         s1.clone()
             .velocity(60)
             .transpose_down(Oct)
@@ -51,6 +53,5 @@ fn main() {
             .velocity(80)
             .harmonize_down(&c_maj, Degree::Fourth)
             .split_notes(vec![false, false, true, true, false, false, true]),
-    ].into_iter().map(|v| -> Arc<dyn Midibox> { Arc::new(v) }).collect()
-    )
+    ].into_iter().map(|seq| seq.midibox()).collect())
 }
