@@ -561,9 +561,8 @@ pub struct PlayingNote {
     pub note: Midi,
 }
 
-#[derive(Debug, Clone)]
 pub struct Player {
-    tick_duration: Duration,
+    meter: Box<dyn Meter>,
     tick_id: u64,
     note_id: u64,
     channels: Vec<Receiver<Vec<Midi>>>,
@@ -576,7 +575,7 @@ impl Player {
         channels: Vec<Receiver<Vec<Midi>>>,
     ) -> Self {
         Player {
-            tick_duration: meter.tick_duration(),
+            meter,
             tick_id: 0,
             note_id: 0,
             channels: channels.clone(),
@@ -593,7 +592,7 @@ impl Player {
     /// Increment and return the tick_id
     pub fn tick(&mut self) -> u64 {
         self.tick_id += 1;
-        sleep(self.tick_duration);
+        sleep(self.meter.tick_duration());
         return self.tick_id;
     }
 
@@ -756,24 +755,22 @@ pub fn try_run(bpm: u32, sequences: Vec<Arc<dyn Midibox>>) -> Result<(), Box<dyn
 
     let player_running = Arc::clone(&running);
     let player_cleanup_finished = Arc::clone(&clean_up_finished);
-    thread::spawn(move || {
-        println!("Player Starting.");
-        while player_running.load() {
-            println!("Time: {}", player.time());
-            for note in player.poll_channels() {
-                send_note_to_device(&raw_midi_tx, note, NOTE_ON_MSG)
-            }
-            player.tick();
-            for note in player.clear_elapsed_notes() {
-                send_note_to_device(&raw_midi_tx, note, NOTE_OFF_MSG)
-            }
+    println!("Player Starting.");
+    while player_running.load() {
+        println!("Time: {}", player.time());
+        for note in player.poll_channels() {
+            send_note_to_device(&raw_midi_tx, note, NOTE_ON_MSG)
         }
-        for note in player.clear_all_notes() {
+        player.tick();
+        for note in player.clear_elapsed_notes() {
             send_note_to_device(&raw_midi_tx, note, NOTE_OFF_MSG)
         }
-        player_cleanup_finished.store(true);
-        println!("Player Exiting.");
-    });
+    }
+    for note in player.clear_all_notes() {
+        send_note_to_device(&raw_midi_tx, note, NOTE_OFF_MSG)
+    }
+    player_cleanup_finished.store(true);
+    println!("Player Exiting.");
 
     exit_rx.recv()?;
     Ok(())
