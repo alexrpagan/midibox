@@ -687,6 +687,7 @@ pub fn run(bpm: u32, sequence: Vec<Arc<dyn Midibox>>) {
 pub fn try_run(bpm: u32, sequences: Vec<Arc<dyn Midibox>>) -> Result<(), Box<dyn Error>> {
     let midi_out = MidiOutput::new("Midi Outputs")?;
 
+    // TODO: factor out MIDI connection logic into separate module with YAML config
     // Get an output port (read from console if multiple are available)
     let out_ports = midi_out.ports();
     let out_port: &MidiOutputPort = match out_ports.len() {
@@ -743,6 +744,7 @@ pub fn try_run(bpm: u32, sequences: Vec<Arc<dyn Midibox>>) -> Result<(), Box<dyn
     let ctrlc_running = Arc::clone(&running);
     ctrlc::set_handler(move || ctrlc_running.store(false))?;
 
+    // TODO: recieve all messages in one thread vs. thread-per-sequence
     // make sure that all sequence threads have started before starting ticker
     let starting_line = Arc::new(Barrier::new(sequences.len() + 1));
     let mut player = Player::new(
