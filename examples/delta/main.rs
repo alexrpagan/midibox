@@ -27,30 +27,30 @@ fn main() {
     run(300, vec![
         s1.clone()
             .velocity(70)
-            .transpose_down(Oct).gate(vec![true, false, true, true, false, true, false, true]),
+            .transpose_down(Oct).split_notes(vec![true, false, true, true, false, true, false, true]),
         s1.clone()
             .velocity(60)
             .transpose_down(Oct)
             .harmonize_down(&c_maj, Degree::Fourth)
-            .gate(vec![false, true, false, false, true, false, true, false]),
+            .split_notes(vec![false, true, false, false, true, false, true, false]),
         s1.clone()
-            .gate(vec![true, false, false, true]),
+            .split_notes(vec![true, false, false, true]),
         s1.clone()
             .velocity(110)
             .harmonize_up(&c_maj, Degree::Third)
-            .gate(vec![false, true, false, false, true]),
+            .split_notes(vec![false, true, false, false, true]),
         s1.clone()
             .velocity(60)
             .harmonize_down(&c_maj, Degree::Second)
-            .gate(vec![false, false, true, false, false, true]),
+            .split_notes(vec![false, false, true, false, false, true]),
         s1.clone()
             .velocity(90)
             .harmonize_up(&c_maj, Degree::Fifth)
-            .flatten().mask(vec![true, true, false, false, true]),
+            .split_notes(vec![true, true, false, false, true]),
         s1.clone()
             .velocity(80)
             .harmonize_down(&c_maj, Degree::Fourth)
-            .gate(vec![false, false, true, true, false, false, true]),
+            .split_notes(vec![false, false, true, true, false, false, true]),
     ].into_iter().map(|v| -> Arc<dyn Midibox> { Arc::new(v) }).collect()
     )
 }
