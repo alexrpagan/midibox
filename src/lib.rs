@@ -488,7 +488,7 @@ impl FixedSequence {
     }
 
     /// Splits each note into a series of metronome ticks adding to the note's duration
-    pub fn flatten(mut self) -> Self {
+    pub fn split_to_ticks(mut self) -> Self {
         self.notes = self.notes.into_iter().flat_map(|m| {
             let old_duration = m.duration as usize;
             return vec![m.set_duration(1)].repeat(old_duration).into_iter();
@@ -514,8 +514,8 @@ impl FixedSequence {
         self
     }
 
-    pub fn gate(self, mask: Vec<bool>) -> Self {
-        self.flatten().mask(mask)
+    pub fn split_notes(self, mask: Vec<bool>) -> Self {
+        self.split_to_ticks().mask(mask)
     }
 }
 
