@@ -29,7 +29,7 @@ impl Bpm {
 }
 
 pub trait Midibox: Send + Sync {
-    fn iter(&self) -> Box<dyn Iterator<Item=Vec<Midi>> + '_>;
+    fn render(&self) -> Vec<Vec<Midi>>;
 }
 
 

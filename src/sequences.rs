@@ -169,13 +169,16 @@ impl Add<Interval> for FixedSequence {
 }
 
 impl Midibox for FixedSequence {
-    fn iter(&self) -> Box<dyn Iterator<Item=Vec<Midi>> + '_> {
-        return Box::new(
+    fn render(&self) -> Vec<Vec<Midi>> {
+        let size = self.notes.len();
+        return
             self.notes
                 .iter()
                 .map(|m| vec![*m])
                 .cycle()
-                .skip(self.head_position));
+                .skip(self.head_position)
+                .take(size)
+                .collect::<Vec<Vec<Midi>>>()
     }
 }
 
