@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::io::{stdin, stdout, Write};
-use std::sync::{Arc, Barrier};
+use std::sync::Arc;
 use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
@@ -23,20 +23,30 @@ pub struct Player {
     meter: Box<dyn Meter>,
     tick_id: u64,
     note_id: u64,
-    channels: Vec<Receiver<Vec<Midi>>>,
+    channels: Vec<Vec<Vec<Midi>>>,
+    positions: HashMap<usize, usize>,
     playing_notes: HashMap<u64, PlayingNote>,
 }
 
 impl Player {
     pub fn new(
         meter: Box<dyn Meter>,
-        channels: Vec<Receiver<Vec<Midi>>>,
+        channels: Vec<Arc<dyn Midibox>>,
     ) -> Self {
+        // better way to initialize?
+        let mut pos : HashMap<usize, usize> = HashMap::new();
+        for i in 0..channels.len() {
+            pos.insert(i, 0);
+        }
+
         Player {
             meter,
             tick_id: 0,
             note_id: 0,
-            channels: channels.clone(),
+            channels: channels.into_iter()
+                .map(|m| m.render())
+                .collect(),
+            positions: pos,
             playing_notes: HashMap::new(),
         }
     }
@@ -71,13 +81,19 @@ impl Player {
     /// Perform a non-blocking poll of all channels the player is connected to. Each channel may
     /// return a vectors of notes to play simultaneously.
     pub fn poll_channels(&mut self) -> Vec<PlayingNote> {
-        // TODO: how to get rid of this clone?
-        for (channel_id, note_channel) in self.channels.clone().iter().enumerate() {
+        for (channel_id, note_channel) in self.channels.clone().into_iter().enumerate() {
             if !self.should_poll_channel(channel_id) {
                 continue;
             }
-            match note_channel.try_recv() {
-                Ok(notes) => {
+
+            let note_index = *(
+                self.positions
+                    .get(&channel_id)
+                    .expect("missing play position for channel")
+            );
+
+            match note_channel.get(note_index) {
+                Some(notes) => {
                     println!("Channel {} sent notes {:?}", channel_id, notes);
                     for note in notes {
                         let note_id = self.incr_note_id();
@@ -89,14 +105,13 @@ impl Player {
                         self.playing_notes.insert(note_id, PlayingNote {
                             channel_id,
                             start_tick_id: self.tick_id,
-                            note,
+                            note: *note,
                         });
                     }
+                    self.positions.insert(channel_id, (note_index + 1) % note_channel.len());
                 }
-
-                // TODO: add retry here
-                Err(e) => {
-                    println!("Error while reading {} from channel {}", e, channel_id);
+                None => {
+                    println!("No input from channel {}", channel_id);
                 }
             }
         }
@@ -204,22 +219,15 @@ pub fn try_run(bpm: Box<dyn Meter>, sequences: Vec<Arc<dyn Midibox>>) -> Result<
     let ctrlc_running = Arc::clone(&running);
     ctrlc::set_handler(move || ctrlc_running.store(false))?;
 
-    // TODO: recieve all messages in one thread vs. thread-per-sequence
-    // make sure that all sequence threads have started before starting ticker
-    let starting_line = Arc::new(Barrier::new(sequences.len() + 1));
     let player_running = Arc::clone(&running);
     let player_cleanup_finished = Arc::clone(&clean_up_finished);
 
     let mut player = Player::new(
         bpm,
-        sequences.iter()
-            .map(|seq| spawn_sequence(&running, &starting_line, &seq))
-            .collect(),
+        sequences.clone()
     );
 
     println!("Player Starting.");
-    starting_line.wait();
-
 
     while player_running.load() {
         println!("Time: {}", player.time());
@@ -241,38 +249,6 @@ pub fn try_run(bpm: Box<dyn Meter>, sequences: Vec<Arc<dyn Midibox>>) -> Result<
     Ok(())
 }
 
-/// Launches a thread that feeds notes from the provided sequence into a bounded channel, returning a
-/// receiver that can be used to poll for notes.
-fn spawn_sequence(
-    running: &Arc<AtomicCell<bool>>,
-    starting_line: &Arc<Barrier>,
-    sequence: &Arc<dyn Midibox>,
-) -> Receiver<Vec<Midi>> {
-    let (note_tx, note_rx)
-        : (Sender<Vec<Midi>>, Receiver<Vec<Midi>>) = bounded(1024);
-    let barrier = Arc::clone(&starting_line);
-    let to_run = Arc::clone(&running);
-    let midibox = sequence.clone();
-    thread::spawn(move || {
-        // block until all other sequence threads are ready to start
-        let mut seq_iter = midibox.iter();
-        barrier.wait();
-        println!("Midibox Starting.");
-        while to_run.load() {
-            // TODO: gracefully handle this error instead of `unwrap`
-            let batch = seq_iter.next().unwrap();
-            match note_tx.send(batch) {
-                Ok(_) => {}
-                Err(e) => {
-                    println!("Encountered while sending notes: {}", e);
-                }
-            }
-        }
-        println!("Midibox Exiting.");
-    });
-
-    note_rx
-}
 
 fn send_note_to_device(raw_midi_tx: &Sender<[u8; 3]>, playing: PlayingNote, midi_status: u8) {
     match playing.note.u8_maybe() {
@@ -293,6 +269,6 @@ fn forward_to_midi_device(
         Ok(msg) => {
             let _ = device_conn.send(&msg);
         }
-        Err(e) => println!("Error while recieving MIDI data {}", e)
+        Err(e) => println!("Error while receiving MIDI data {}", e)
     }
 }

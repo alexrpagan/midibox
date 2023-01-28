@@ -10,9 +10,9 @@ fn main() {
         Tone::B.oct(2)  * 128,
         Tone::E.oct(2)  * 128,
         Tone::D.oct(2)  * 128,
-        Tone::C.oct(1)  * 128,
-        Tone::E.oct(1)  * 128,
-        Tone::B.oct(1)  * 128,
+        Tone::C.oct(2)  * 128,
+        Tone::E.oct(2)  * 128,
+        Tone::B.oct(2)  * 128,
         Tone::C.oct(2)  * 128,
     ]).transpose_down(Interval::Min2);
 
