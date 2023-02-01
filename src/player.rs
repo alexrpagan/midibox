@@ -121,7 +121,7 @@ impl Player {
             self.playing_notes
                 .values()
                 .filter(|note| note.start_tick_id == self.tick_id)
-                .map(|note| note.clone())
+                .map(|note| note)
         );
         notes
     }
@@ -141,13 +141,13 @@ impl Player {
         F: Fn(&PlayingNote) -> bool
     {
         let mut notes: Vec<PlayingNote> = Vec::new();
-        // TODO: how to get rid of this clone?
-        self.playing_notes.clone().iter()
-            .filter(|(_, playing)| should_clear(playing.clone()))
-            .for_each(|(note_id, playing)| {
-                notes.push(playing.clone());
+        for (note_id, playing) in self.playing_notes.clone() {
+            if should_clear(&playing) {
                 self.playing_notes.remove(&note_id);
-            });
+                notes.push(playing);
+            }
+        }
+
         notes
     }
 }
@@ -228,7 +228,6 @@ pub fn try_run(bpm: Box<dyn Meter>, sequences: Vec<Arc<dyn Midibox>>) -> Result<
     );
 
     println!("Player Starting.");
-
     while player_running.load() {
         println!("Time: {}", player.time());
         for note in player.poll_channels() {

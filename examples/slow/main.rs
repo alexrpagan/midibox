@@ -17,7 +17,7 @@ fn main() {
     ]).transpose_down(Interval::Min2);
 
     run(
-        Bpm::new(1250),
+        Bpm::new(2500),
         vec![
             s1.clone(),
             s1.clone().harmonize_down(&scale, Degree::Fourth),
