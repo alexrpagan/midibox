@@ -472,7 +472,6 @@ dependencies = [
  "crossbeam",
  "ctrlc",
  "midir",
- "rangemap",
  "rodio",
  "serde",
  "serde_yaml",
@@ -749,12 +748,6 @@ checksum = "bbe448f377a7d6961e30f5955f9b8d106c3f5e449d493ee1b125c1d43c2b5179"
 dependencies = [
  "proc-macro2",
 ]
-
-[[package]]
-name = "rangemap"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fa20df61fa7daf0ecf0735b9841ced4a0d25962d1b1eb2dd28dcdd37bb688f2"
 
 [[package]]
 name = "raw-window-handle"
