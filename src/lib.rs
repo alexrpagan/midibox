@@ -33,6 +33,9 @@ pub trait Midibox: Send + Sync {
     fn render(&self) -> Vec<Vec<Midi>>;
 }
 
+pub trait Named {
+    fn name() -> String;
+}
 
 pub trait ToMidi {
     fn midi(&self) -> Midi;
