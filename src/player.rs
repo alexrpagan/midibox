@@ -23,7 +23,9 @@ pub struct Player {
     meter: Box<dyn Meter>,
     tick_id: u64,
     note_id: u64,
+    // could these be slices?
     channels: Vec<Vec<Vec<Midi>>>,
+    // could just be a vec / slice
     positions: HashMap<usize, usize>,
     playing_notes: HashMap<u64, PlayingNote>,
 }

@@ -3,6 +3,7 @@ use std::time::Duration;
 
 pub mod sequences;
 pub mod player;
+pub mod drumlogue;
 
 pub const NOTE_ON_MSG: u8 = 0x90;
 pub const NOTE_OFF_MSG: u8 = 0x80;
@@ -32,6 +33,10 @@ pub trait Midibox: Send + Sync {
     fn render(&self) -> Vec<Vec<Midi>>;
 }
 
+
+pub trait ToMidi {
+    fn midi(&self) -> Midi;
+}
 
 #[derive(Debug, Clone)]
 pub struct Scale {
@@ -286,6 +291,7 @@ impl Midi {
     }
 }
 
+/// Transposes MIDI note up specified interval
 impl Add<Interval> for Midi {
     type Output = Midi;
 
@@ -294,6 +300,7 @@ impl Add<Interval> for Midi {
     }
 }
 
+/// Transposes MIDI node down specified interval
 impl Sub<Interval> for Midi {
     type Output = Midi;
 
@@ -302,6 +309,7 @@ impl Sub<Interval> for Midi {
     }
 }
 
+/// Sets duration of MIDI note to specified duration in `u32` ticks
 impl Mul<u32> for Midi {
     type Output = Midi;
 
@@ -375,6 +383,12 @@ impl Tone {
     }
 }
 
+impl ToMidi for Tone {
+    fn midi(&self) -> Midi {
+        // C should be set to middle C, i.e., C4
+        return self.oct(4);
+    }
+}
 
 #[cfg(test)]
 mod tests {
