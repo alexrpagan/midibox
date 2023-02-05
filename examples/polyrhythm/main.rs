@@ -1,6 +1,6 @@
-use midibox::{Bpm, Degree, Interval, Scale, Tone};
+use midibox::{Bpm, Interval, Scale, Tone};
 use midibox::sequences::FixedSequence;
-use midibox::player::run;
+use midibox::player::{PlayerConfig, try_run};
 
 // preset 494, 21
 fn main() {
@@ -29,7 +29,8 @@ fn main() {
     let slow = roots.clone().duration(5).repeat(2);
     let slow_ff1 = roots.clone().duration(5).fast_forward(1).repeat(2);
 
-    run(
+    try_run(
+        PlayerConfig::for_port(2),
         Bpm::new(500),
         vec![
             (
@@ -51,5 +52,5 @@ fn main() {
                     .transpose_down(Interval::Min3)
             ).midibox()
         ]
-    )
+    ).unwrap()
 }

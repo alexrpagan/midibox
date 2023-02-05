@@ -1,6 +1,6 @@
 use midibox::{Bpm, Degree, Interval, Scale, Tone};
 use midibox::sequences::FixedSequence;
-use midibox::player::run;
+use midibox::player::{PlayerConfig, try_run};
 
 fn main() {
     let scale = Scale::major(Tone::Gb);
@@ -16,7 +16,8 @@ fn main() {
         Tone::C.oct(2)  * 128,
     ]).transpose_down(Interval::Min2);
 
-    run(
+    try_run(
+        PlayerConfig::for_port(2),
         Bpm::new(2500),
         vec![
             s1.clone(),
@@ -24,5 +25,5 @@ fn main() {
             s1.clone().harmonize_up(&scale, Degree::Tenth),
             s1.clone().harmonize_up(&scale, Degree::Seventh)
         ].into_iter().map(|seq| seq.midibox()).collect()
-    )
+    ).unwrap()
 }
