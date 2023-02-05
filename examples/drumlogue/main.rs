@@ -1,12 +1,27 @@
-use midibox::Bpm;
+use std::collections::HashMap;
+use midibox::{Bpm, Tone};
 use midibox::drumlogue::Drumlogue::{BD, CH, CP, HT, LT, OH, RS, SD};
+use midibox::Interval::Oct;
 use midibox::sequences::FixedSequence;
-use midibox::player::run;
+use midibox::player::{PlayerConfig, try_run};
+use midibox::router::MapRouter;
 use midibox::Tone::Rest;
 use midibox::ToMidi;
 
 fn main() {
-    run(
+    let mut channel_id_to_port_id : HashMap<usize, usize> = HashMap::new();
+    // H Bank 1
+    for i in 0..8 {
+        channel_id_to_port_id.insert(i, 1);
+    }
+    // Minilogue preset 440
+    channel_id_to_port_id.insert(8, 2);
+    channel_id_to_port_id.insert(9, 2);
+
+    try_run(
+        PlayerConfig {
+            router: Box::new(MapRouter::new(channel_id_to_port_id)),
+        },
         Bpm::new(1800),
         vec![
             FixedSequence::new(vec![
@@ -59,6 +74,35 @@ fn main() {
                 OH.midi().set_velocity(42) * 4,
                 CH.midi().set_velocity(43) * 4,
             ]),
+            FixedSequence::new(vec![
+                Tone::Gb.oct(3) * 32,
+                Tone::D.oct(3) * (32 - 8),
+                Tone::Gb.oct(2) * (16 + 8),
+                Tone::B.oct(2) * 32,
+
+                Tone::Gb.oct(3) * 16,
+                Tone::G.oct(3) * (32 - 8 + 16),
+                Tone::B.oct(2) * (32 + 8),
+                Tone::A.oct(2) * 16,
+            ]).transpose_up(Oct),
+            FixedSequence::new(vec![
+                Tone::D.oct(2) * 64,
+                Tone::E.oct(2) * 64,
+                Tone::Gb.oct(2) * 64,
+                Tone::G.oct(2) * 64,
+            ]).split_notes(vec![
+                true, false, false, false,
+                false, false, false, false,
+                false, false, false, false,
+                true, false, false, false,
+                false, false, false, false,
+
+                true, false, false, false,
+                false, false, false, false,
+                true, false, false, false,
+                true, false, false, false,
+                false, false, false, false,
+            ])
         ].into_iter().map(|seq| seq.midibox()).collect()
-    )
+    ).unwrap()
 }

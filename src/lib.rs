@@ -3,6 +3,7 @@ use std::time::Duration;
 
 pub mod sequences;
 pub mod player;
+pub mod router;
 pub mod drumlogue;
 
 pub const NOTE_ON_MSG: u8 = 0x90;

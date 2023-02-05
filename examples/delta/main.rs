@@ -1,7 +1,7 @@
 use midibox::{Bpm, Degree, Scale, Tone};
 use midibox::sequences::FixedSequence;
 use midibox::Interval::Oct;
-use midibox::player::run;
+use midibox::player::{PlayerConfig, try_run};
 
 fn main() {
     let c_maj = Scale::major(Tone::C);
@@ -25,33 +25,36 @@ fn main() {
         Tone::C.oct(4)  * 16,
     ]);
 
-    run(Bpm::new(300), vec![
-        s1.clone()
-            .velocity(70)
-            .transpose_down(Oct)
-            .split_notes(vec![true, false, true, true, false, true, false, true]),
-        s1.clone()
-            .velocity(60)
-            .transpose_down(Oct)
-            .harmonize_down(&c_maj, Degree::Fourth)
-            .split_notes(vec![false, true, false, false, true, false, true, false]),
-        s1.clone()
-            .split_notes(vec![true, false, false, true]),
-        s1.clone()
-            .velocity(110)
-            .harmonize_up(&c_maj, Degree::Third)
-            .split_notes(vec![false, true, false, false, true]),
-        s1.clone()
-            .velocity(60)
-            .harmonize_down(&c_maj, Degree::Second)
-            .split_notes(vec![false, false, true, false, false, true]),
-        s1.clone()
-            .velocity(90)
-            .harmonize_up(&c_maj, Degree::Fifth)
-            .split_notes(vec![true, true, false, false, true]),
-        s1.clone()
-            .velocity(80)
-            .harmonize_down(&c_maj, Degree::Fourth)
-            .split_notes(vec![false, false, true, true, false, false, true]),
-    ].into_iter().map(|seq| seq.midibox()).collect())
+    try_run(
+        PlayerConfig::for_port(2),
+        Bpm::new(300), vec![
+            s1.clone()
+                .velocity(70)
+                .transpose_down(Oct)
+                .split_notes(vec![true, false, true, true, false, true, false, true]),
+            s1.clone()
+                .velocity(60)
+                .transpose_down(Oct)
+                .harmonize_down(&c_maj, Degree::Fourth)
+                .split_notes(vec![false, true, false, false, true, false, true, false]),
+            s1.clone()
+                .split_notes(vec![true, false, false, true]),
+            s1.clone()
+                .velocity(110)
+                .harmonize_up(&c_maj, Degree::Third)
+                .split_notes(vec![false, true, false, false, true]),
+            s1.clone()
+                .velocity(60)
+                .harmonize_down(&c_maj, Degree::Second)
+                .split_notes(vec![false, false, true, false, false, true]),
+            s1.clone()
+                .velocity(90)
+                .harmonize_up(&c_maj, Degree::Fifth)
+                .split_notes(vec![true, true, false, false, true]),
+            s1.clone()
+                .velocity(80)
+                .harmonize_down(&c_maj, Degree::Fourth)
+                .split_notes(vec![false, false, true, true, false, false, true]),
+        ].into_iter().map(|seq| seq.midibox()).collect()
+    ).unwrap()
 }
