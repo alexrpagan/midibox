@@ -177,7 +177,7 @@ impl Player {
 
 
 pub struct PlayerConfig {
-    pub router: Box<dyn Router>
+    router: Box<dyn Router>
 }
 
 impl PlayerConfig {
@@ -190,6 +190,12 @@ impl PlayerConfig {
     pub fn for_port(port_id: usize) -> Self {
         PlayerConfig {
             router: Box::new(StaticRouter::new(port_id))
+        }
+    }
+
+    pub fn from_router(router: Box<dyn Router>) -> Self {
+        PlayerConfig {
+            router
         }
     }
 }
