@@ -19,9 +19,7 @@ fn main() {
     channel_id_to_port_id.insert(9, 2);
 
     try_run(
-        PlayerConfig {
-            router: Box::new(MapRouter::new(channel_id_to_port_id)),
-        },
+        PlayerConfig::from_router(Box::new(MapRouter::new(channel_id_to_port_id))),
         Bpm::new(1800),
         vec![
             FixedSequence::new(vec![
