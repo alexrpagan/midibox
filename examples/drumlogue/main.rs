@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use midibox::{Bpm, Tone};
+use midibox::{Bpm, Scale, Tone, Degree};
 use midibox::drumlogue::Drumlogue::{BD, CH, CP, HT, LT, OH, RS, SD};
 use midibox::Interval::Oct;
 use midibox::sequences::FixedSequence;
@@ -10,97 +10,104 @@ use midibox::ToMidi;
 
 fn main() {
     let mut channel_id_to_port_id : HashMap<usize, usize> = HashMap::new();
-    // H Bank 1
+    // Drumlogue H Bank 1
     for i in 0..8 {
         channel_id_to_port_id.insert(i, 1);
     }
     // Minilogue preset 440
-    channel_id_to_port_id.insert(8, 2);
-    channel_id_to_port_id.insert(9, 2);
+    for i in 8..11 {
+        channel_id_to_port_id.insert(i, 2);
+    }
+
+    let scale = Scale::major(Tone::D);
+
+    let bass_seq = FixedSequence::new(vec![
+        Tone::D.oct(2) * 16,
+        Tone::E.oct(2) * 16,
+        Tone::Gb.oct(2) * 16,
+        Tone::G.oct(2) * 16,
+    ]);
+
+    let bass_mask = vec![
+        true,
+        false,
+        false,
+        true,
+        false,
+
+        true,
+        false,
+        true,
+        true,
+        false,
+    ];
 
     try_run(
         PlayerConfig::from_router(Box::new(MapRouter::new(channel_id_to_port_id))),
-        Bpm::new(1800),
+        Bpm::new(450),
         vec![
             FixedSequence::new(vec![
-                RS.midi().set_velocity(30) * 4,
-                Rest.midi() * 8,
-                Rest.midi() * 16
+                RS.midi().set_velocity(30) * 1,
+                Rest.midi() * 2,
+                Rest.midi() * 4
+            ]),
+            FixedSequence::new(vec![
+                Rest.midi() * 1,
+                CH.midi().set_velocity(15) * 2
+            ]),
+            FixedSequence::new(vec![
+                BD.midi().set_velocity(100) * 8,
+                BD.midi().set_velocity(50) * 1,
+                BD.midi().set_velocity(70) * 1,
+                Rest.midi() * 7,
+                BD.midi() * 8,
+                BD.midi() * 4,
+                BD.midi() * 2,
+                BD.midi().set_velocity(15) * 1,
+                BD.midi().set_velocity(20) * 1,
             ]),
             FixedSequence::new(vec![
                 Rest.midi() * 4,
-                CH.midi().set_velocity(15) * 8
+                SD.midi() * 4,
             ]),
             FixedSequence::new(vec![
-                BD.midi().set_velocity(100) * 32,
-                BD.midi().set_velocity(50) * 4,
-                BD.midi().set_velocity(70) * 4,
-                Rest.midi() * 28,
-                BD.midi() * 32,
-                BD.midi() * 16,
-                BD.midi() * 8,
-                BD.midi().set_velocity(15) * 4,
-                BD.midi().set_velocity(20) * 4,
-            ]),
-            FixedSequence::new(vec![
-                Rest.midi() * 16,
-                SD.midi() * 16,
-            ]),
-            FixedSequence::new(vec![
-                Rest.midi() * 48,
-                CP.midi() * 16,
-            ]),
-            FixedSequence::new(vec![
-                Rest.midi() * 32,
-                HT.midi().set_velocity(30) * 4,
-                LT.midi().set_velocity(70) * 4,
-                Rest.midi() * 16
-            ]),
-            FixedSequence::new(vec![
-                Rest.midi() * 32,
-                Rest.midi() * 8,
-                BD.midi().set_velocity(30) * 4,
-                BD.midi().set_velocity(100) * 4,
-                Rest.midi() * 8
+                Rest.midi() * 12,
+                CP.midi() * 4,
             ]),
             FixedSequence::new(vec![
                 Rest.midi() * 8,
-                CH.midi().set_velocity(40) * 8,
-                Rest.midi() * 8,
-                CH.midi().set_velocity(44) * 8,
-                Rest.midi() * 8,
-                OH.midi().set_velocity(42) * 4,
-                CH.midi().set_velocity(43) * 4,
+                HT.midi().set_velocity(30) * 1,
+                LT.midi().set_velocity(70) * 1,
+                Rest.midi() * 4
             ]),
             FixedSequence::new(vec![
-                Tone::Gb.oct(3) * 32,
-                Tone::D.oct(3) * (32 - 8),
-                Tone::Gb.oct(2) * (16 + 8),
-                Tone::B.oct(2) * 32,
+                Rest.midi() * 8,
+                Rest.midi() * 2,
+                BD.midi().set_velocity(30) * 1,
+                BD.midi().set_velocity(100) * 1,
+                Rest.midi() * 2
+            ]),
+            FixedSequence::new(vec![
+                Rest.midi() * 2,
+                CH.midi().set_velocity(40) * 2,
+                Rest.midi() * 2,
+                CH.midi().set_velocity(44) * 2,
+                Rest.midi() * 2,
+                OH.midi().set_velocity(42) * 1,
+                CH.midi().set_velocity(43) * 1,
+            ]),
+            FixedSequence::new(vec![
+                Tone::Gb.oct(3) * 8,
+                Tone::D.oct(3) * 7,
+                Tone::Gb.oct(2) * 6,
+                Tone::B.oct(2) * 8,
 
-                Tone::Gb.oct(3) * 16,
-                Tone::G.oct(3) * (32 - 8 + 16),
-                Tone::B.oct(2) * (32 + 8),
-                Tone::A.oct(2) * 16,
+                Tone::Gb.oct(3) * 4,
+                Tone::G.oct(3) * (8 - 2 + 4),
+                Tone::B.oct(2) * (8 + 2),
+                Tone::A.oct(2) * 4,
             ]).transpose_up(Oct),
-            FixedSequence::new(vec![
-                Tone::D.oct(2) * 64,
-                Tone::E.oct(2) * 64,
-                Tone::Gb.oct(2) * 64,
-                Tone::G.oct(2) * 64,
-            ]).split_notes(vec![
-                true, false, false, false,
-                false, false, false, false,
-                false, false, false, false,
-                true, false, false, false,
-                false, false, false, false,
-
-                true, false, false, false,
-                false, false, false, false,
-                true, false, false, false,
-                true, false, false, false,
-                false, false, false, false,
-            ])
+            bass_seq.clone().split_notes(bass_mask.clone()),
         ].into_iter().map(|seq| seq.midibox()).collect()
     ).unwrap()
 }
