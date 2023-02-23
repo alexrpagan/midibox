@@ -91,6 +91,9 @@ fn main() {
         Tone::Gb.midi().set_velocity(40) * 4
     ]);
 
+    assert_eq!(roots.total_duration(), harmony_1.total_duration());
+    assert_eq!(roots.total_duration(), harmony_2.total_duration());
+
     let synth = vec![
         roots.clone().midibox(),
         roots.clone().transpose_up(Interval::Perf5).midibox(),
