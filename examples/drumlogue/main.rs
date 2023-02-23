@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use midibox::{Bpm, Scale, Tone, Degree};
+use midibox::{Bpm, Scale, Tone};
 use midibox::drumlogue::Drumlogue::{BD, CH, CP, HT, LT, OH, RS, SD};
 use midibox::Interval::Oct;
 use midibox::sequences::Seq;
@@ -19,7 +19,7 @@ fn main() {
         channel_id_to_port_id.insert(i, 2);
     }
 
-    let scale = Scale::major(Tone::D);
+    let _scale = Scale::major(Tone::D);
 
     let bass_seq = Seq::new(vec![
         Tone::D.oct(2) * 16,
