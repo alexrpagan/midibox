@@ -71,7 +71,7 @@ impl Scale {
     pub fn midi(&self, oct: u8) -> Vec<Midi> {
         let mut midi = Vec::new();
         midi.push(self.root.oct(oct));
-        for interval in self.intervals.clone().into_iter().take(self.intervals.len() - 1) {
+        for interval in self.intervals.iter().take(self.intervals.len() - 1) {
             midi.push(Midi::from_option(
                 midi.last().unwrap().u8_maybe().map(|v| v + interval)
             ))
@@ -86,8 +86,7 @@ impl Scale {
             None => None,
             Some(pos) => {
                 let steps_to_raise: u8 = self.intervals
-                    .clone()
-                    .into_iter()
+                    .iter()
                     .cycle()
                     .skip(pos)
                     .take(harmonize.steps())
@@ -107,9 +106,8 @@ impl Scale {
         return match degree_maybe {
             None => None,
             Some(pos) => {
-                let scale_at_pos: Vec<u8> = self.intervals
-                    .clone()
-                    .into_iter()
+                let scale_at_pos: Vec<&u8> = self.intervals
+                    .iter()
                     .cycle()
                     .skip(pos)
                     .take(self.intervals.len())
