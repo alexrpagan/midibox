@@ -184,8 +184,12 @@ pub struct FixedSeq {
 }
 
 impl Midibox for FixedSeq {
-    fn get(&self, i: usize) -> Option<&Vec<Midi>> {
-        return self.seq.get(i)
+    fn update(&mut self) {
+
+    }
+
+    fn get(&self, i: usize) -> Option<Vec<Midi>> {
+        return self.seq.get(i).map(|it| it.clone())
     }
 
     fn len(&self) -> usize {

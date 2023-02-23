@@ -11,6 +11,7 @@ ctrlc = "3.2.3"
 crossbeam = "0.8.2"
 log = "0.4.17"
 env_logger = "0.10.0"
+rand = "0.8.5"
 
 # rodio = "0.16.0"
 # serde = "1.0"
