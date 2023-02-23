@@ -65,9 +65,8 @@ impl Player {
             .count() == 0
     }
 
-    /// A channel is a description of the notes the player should play.
-    ///
-    /// The outer-most `Vec` contains the channels the `Player` is currently playing.
+    /// Determines which notes to play at a point in time based on a set of channels and play-head
+    /// positions.
     ///
     /// Channels are played concurrently -- the player will cycle through each channel in lockstep,
     /// and emit all notes at the position corresponding to the current play time. There is no limit
@@ -82,7 +81,7 @@ impl Player {
     /// TODO: Sparse channel representations since snapshots of Player should be immutable.
     pub fn poll_channels(
         &mut self,
-        play_positions: &mut HashMap<usize, usize>,
+        play_head_positions: &mut HashMap<usize, usize>,
         channels: &Vec<Vec<Vec<Midi>>>
     ) -> Vec<PlayingNote> {
         for (channel_id, note_channel) in channels.into_iter().enumerate() {
@@ -91,7 +90,7 @@ impl Player {
             }
 
             let note_index = *(
-                play_positions.get(&channel_id)
+                play_head_positions.get(&channel_id)
                 .expect("missing play position for channel")
             );
 
@@ -111,7 +110,7 @@ impl Player {
                             note: *note,
                         });
                     }
-                    play_positions.insert(channel_id, (note_index + 1) % note_channel.len());
+                    play_head_positions.insert(channel_id, (note_index + 1) % note_channel.len());
                 }
                 None => {
                     error!("No input from channel {}", channel_id);
@@ -154,8 +153,6 @@ impl Player {
         notes
     }
 }
-
-
 
 pub struct PlayerConfig {
     router: Box<dyn Router>
@@ -224,54 +221,48 @@ pub fn try_run(
         }
     }
 
-    // flag to determine whether to keep running (e.g., while looping in sequence / player threads)
-    let running = Arc::new(AtomicCell::new(true));
-    let clean_up_finished = Arc::new(AtomicCell::new(false));
-
-    let ctrlc_running = Arc::clone(&running);
-    ctrlc::set_handler(move || ctrlc_running.store(false))?;
-
-    let player_running = Arc::clone(&running);
-    let player_cleanup_finished = Arc::clone(&clean_up_finished);
-
-
+    // render sequences to their concrete values
     let n_sequences = sequences.len();
     let channels = sequences.into_iter()
         .map(|m| m.render())
         .collect();
 
     // initialize play positions for all channels to start (i.e., 0)
-    let mut pos : HashMap<usize, usize> = HashMap::new();
+    let mut play_head_positions: HashMap<usize, usize> = HashMap::new();
     for i in 0..n_sequences {
-        pos.insert(i, 0);
+        play_head_positions.insert(i, 0);
     }
+
+    let running = Arc::new(AtomicCell::new(true));
+
+    // Set up listener for ctrl-C command
+    let ctrlc_running = Arc::clone(&running);
+    ctrlc::set_handler(move || ctrlc_running.store(false))?;
 
     let mut player = Player::new();
 
     info!("Player Starting.");
-    while player_running.load() {
+    while running.load() {
         debug!("Time: {}", player.time());
-        for note in player.poll_channels(&mut pos, &channels) {
-            route_note(&player_config, &mut port_id_to_conn, note, NOTE_ON_MSG)
+        for note in player.poll_channels(&mut play_head_positions, &channels) {
+            route_note(&player_config, &mut port_id_to_conn, &note, NOTE_ON_MSG)
         }
         player.do_tick(&bpm);
         for note in player.clear_elapsed_notes() {
-            route_note(&player_config, &mut port_id_to_conn, note, NOTE_OFF_MSG)
+            route_note(&player_config, &mut port_id_to_conn, &note, NOTE_OFF_MSG)
         }
     }
     for note in player.clear_all_notes() {
-        route_note(&player_config, &mut port_id_to_conn, note, NOTE_OFF_MSG)
+        route_note(&player_config, &mut port_id_to_conn, &note, NOTE_OFF_MSG)
     }
-    player_cleanup_finished.store(true);
     info!("Player Exiting.");
-
     Ok(())
 }
 
 fn route_note(
     player_config: &PlayerConfig,
     device_conn: &mut HashMap<usize, MidiOutputConnection>,
-    playing: PlayingNote,
+    playing: &PlayingNote,
     midi_status: u8
 ) {
     match playing.note.u8_maybe() {
