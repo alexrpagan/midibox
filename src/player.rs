@@ -37,12 +37,6 @@ impl Player {
         }
     }
 
-    /// Increment and return the note_id
-    fn incr_note_id(&mut self) -> u64 {
-        self.note_id += 1;
-        return self.note_id;
-    }
-
     /// Increment and return the tick_id, after sleeping for the required duration.
     /// Meter describes the tempo that the player should use during playback.
     pub fn do_tick(&mut self, meter: &Box<dyn Meter>) -> u64 {
@@ -98,7 +92,8 @@ impl Player {
                 Some(notes) => {
                     debug!("Channel {} sent notes {:?}", channel_id, notes);
                     for note in notes {
-                        let note_id = self.incr_note_id();
+                        self.note_id += 1;
+                        let note_id = self.note_id;
                         if note.duration == 0 {
                             continue; // ignore zero-duration notes
                         }
