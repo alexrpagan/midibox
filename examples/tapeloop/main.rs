@@ -10,8 +10,7 @@ fn main() {
     let mut channel_id_to_port_id : HashMap<usize, usize> = HashMap::new();
     let drums = vec![
         Seq::new(vec![
-            BD.midi() * 7,
-            BD.midi().set_velocity(50) * 1,
+            BD.midi() * 8,
             BD.midi() * 7,
             BD.midi().set_velocity(50) * 1,
             BD.midi() * 2,
@@ -65,7 +64,6 @@ fn main() {
         Tone::A.oct(2) * 1,
         Tone::B.oct(2) * 9,
         Tone::Db.oct(3) * 1,
-        Tone::Gb.oct(2) * 1,
     ]);
 
     let harmony_1 =  Seq::new(vec![
@@ -77,7 +75,7 @@ fn main() {
         Tone::Gb.oct(3) * 7,
         Rest.midi() * 7,
         Rest.midi() * 4,
-        Tone::Ab.midi().set_velocity(30) * 8
+        Tone::Ab.midi().set_velocity(30) * 7
     ]);
 
     let harmony_2 =  Seq::new(vec![
@@ -90,7 +88,7 @@ fn main() {
         Tone::Gb.oct(3) * 7,
         Rest.midi() * 7,
         Rest.midi() * 7,
-        Tone::Gb.midi().set_velocity(40) * 5
+        Tone::Gb.midi().set_velocity(40) * 4
     ]);
 
     let synth = vec![

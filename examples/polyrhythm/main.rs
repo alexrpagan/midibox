@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use Drumlogue::CP;
 use midibox::{Bpm, Degree, Interval, Scale, ToMidi, Tone};
 use midibox::drumlogue::Drumlogue;
-use midibox::drumlogue::Drumlogue::{BD, CH, LT, OH, SP1, SP2};
+use midibox::drumlogue::Drumlogue::{BD, CH, LT, OH, SP1};
 use midibox::sequences::Seq;
 use midibox::player::{PlayerConfig, try_run};
 use midibox::router::MapRouter;
@@ -24,17 +24,13 @@ fn main() {
         Tone::E.oct(2),
         Tone::B.oct(3),
     ]);
-    let roots = (
-        sequence.clone() + sequence.clone().harmonize_up(&Scale::major(Tone::C), Degree::Third)
-    );
+    let roots =
+        sequence.clone() + sequence.clone().harmonize_up(&Scale::major(Tone::C), Degree::Third);
 
     let fast = roots.clone().duration(2).split_notes(vec![true, false]).repeat(5);
     let slow_ff1 = roots.clone().duration(5).repeat(2);
 
-    assert_eq!(
-        fast.clone().midibox().render().into_iter().fold(0, |acc, x| acc + x.get(0).unwrap().duration),
-        slow_ff1.clone().midibox().render().into_iter().fold(0, |acc, x| acc + x.get(0).unwrap().duration),
-    );
+    assert_eq!(fast.total_duration(), slow_ff1.total_duration());
 
     try_run(
         PlayerConfig::from_router(Box::new(MapRouter::new(channel_id_to_port_id))),

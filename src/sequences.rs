@@ -34,8 +34,8 @@ impl Seq {
         self.notes.len()
     }
 
-    pub fn len_ticks(&self) -> u32 {
-        return self.notes.clone().into_iter().map(|m| m.duration).sum();
+    pub fn total_duration(&self) -> u32 {
+        return self.notes.iter().map(|it| it.duration).sum()
     }
 
     pub fn fast_forward(mut self, ticks: usize) -> Self {
@@ -137,7 +137,6 @@ impl Seq {
         }).collect();
         self
     }
-
 
     pub fn split_notes(self, mask: Vec<bool>) -> Self {
         self.split_to_ticks().mask(mask)
