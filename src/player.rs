@@ -76,7 +76,7 @@ impl Player {
     pub fn poll_channels(
         &mut self,
         play_head_positions: &mut HashMap<usize, usize>,
-        channels: &Vec<Vec<Vec<Midi>>>
+        channels: &Vec<Box<dyn Midibox>>
     ) -> Vec<PlayingNote> {
         for (channel_id, note_channel) in channels.into_iter().enumerate() {
             if !self.should_poll_channel(channel_id) {
@@ -183,7 +183,7 @@ impl Router for PlayerConfig {
     }
 }
 
-pub fn run(bpm: Box<dyn Meter>, sequences: Vec<Arc<dyn Midibox>>) {
+pub fn run(bpm: Box<dyn Meter>, sequences: Vec<Box<dyn Midibox>>) {
     match try_run(PlayerConfig::empty(), bpm, sequences) {
         Ok(_) => (),
         Err(err) => println!("Error: {}", err)
@@ -193,7 +193,7 @@ pub fn run(bpm: Box<dyn Meter>, sequences: Vec<Arc<dyn Midibox>>) {
 pub fn try_run(
     player_config: PlayerConfig,
     bpm: Box<dyn Meter>,
-    sequences: Vec<Arc<dyn Midibox>>
+    sequences: Vec<Box<dyn Midibox>>
 ) -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
@@ -218,9 +218,6 @@ pub fn try_run(
 
     // render sequences to their concrete values
     let n_sequences = sequences.len();
-    let channels = sequences.into_iter()
-        .map(|m| m.render())
-        .collect();
 
     // initialize play positions for all channels to start (i.e., 0)
     let mut play_head_positions: HashMap<usize, usize> = HashMap::new();
@@ -239,7 +236,7 @@ pub fn try_run(
     info!("Player Starting.");
     while running.load() {
         debug!("Time: {}", player.time());
-        for note in player.poll_channels(&mut play_head_positions, &channels) {
+        for note in player.poll_channels(&mut play_head_positions, &sequences) {
             route_note(&player_config, &mut port_id_to_conn, &note, NOTE_ON_MSG)
         }
         player.do_tick(&bpm);
