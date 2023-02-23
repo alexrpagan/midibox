@@ -31,7 +31,8 @@ impl Bpm {
 }
 
 pub trait Midibox: Send + Sync {
-    fn get(&self, i: usize) -> Option<&Vec<Midi>>;
+    fn update(&mut self);
+    fn get(&self, i: usize) -> Option<Vec<Midi>>;
     fn len(&self) -> usize;
 }
 

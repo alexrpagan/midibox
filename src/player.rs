@@ -76,7 +76,7 @@ impl Player {
     pub fn poll_channels(
         &mut self,
         play_head_positions: &mut HashMap<usize, usize>,
-        channels: &Vec<Box<dyn Midibox>>
+        channels: &mut Vec<Box<dyn Midibox>>
     ) -> Vec<PlayingNote> {
         for (channel_id, note_channel) in channels.into_iter().enumerate() {
             if !self.should_poll_channel(channel_id) {
@@ -102,7 +102,7 @@ impl Player {
                         self.playing_notes.insert(note_id, PlayingNote {
                             channel_id,
                             start_tick_id: self.tick_id,
-                            note: *note,
+                            note: note,
                         });
                     }
                     play_head_positions.insert(channel_id, (note_index + 1) % note_channel.len());
@@ -183,7 +183,7 @@ impl Router for PlayerConfig {
     }
 }
 
-pub fn run(bpm: Box<dyn Meter>, sequences: Vec<Box<dyn Midibox>>) {
+pub fn run(bpm: Box<dyn Meter>, sequences: &mut Vec<Box<dyn Midibox>>) {
     match try_run(PlayerConfig::empty(), bpm, sequences) {
         Ok(_) => (),
         Err(err) => println!("Error: {}", err)
@@ -193,7 +193,7 @@ pub fn run(bpm: Box<dyn Meter>, sequences: Vec<Box<dyn Midibox>>) {
 pub fn try_run(
     player_config: PlayerConfig,
     bpm: Box<dyn Meter>,
-    sequences: Vec<Box<dyn Midibox>>
+    sequences: &mut Vec<Box<dyn Midibox>>
 ) -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
@@ -235,8 +235,13 @@ pub fn try_run(
 
     info!("Player Starting.");
     while running.load() {
+        for i in 0..(sequences.len()) {
+            sequences.get_mut(i)
+                .unwrap_or_else(|| panic!("failed to fetch midibox at position {}", i))
+                .update()
+        }
         debug!("Time: {}", player.time());
-        for note in player.poll_channels(&mut play_head_positions, &sequences) {
+        for note in player.poll_channels(&mut play_head_positions, sequences) {
             route_note(&player_config, &mut port_id_to_conn, &note, NOTE_ON_MSG)
         }
         player.do_tick(&bpm);

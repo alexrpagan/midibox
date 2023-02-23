@@ -45,7 +45,7 @@ fn main() {
     try_run(
         PlayerConfig::from_router(Box::new(MapRouter::new(channel_id_to_port_id))),
         Bpm::new(450),
-        vec![
+        &mut vec![
             Seq::new(vec![
                 RS.midi().set_velocity(30) * 1,
                 Rest.midi() * 2,

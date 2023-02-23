@@ -35,7 +35,7 @@ fn main() {
     try_run(
         PlayerConfig::from_router(Box::new(MapRouter::new(channel_id_to_port_id))),
         Bpm::new(500),
-        vec![
+        &mut vec![
             (
                 fast.clone()
                     + fast.clone().transpose_down(Interval::Perf4)

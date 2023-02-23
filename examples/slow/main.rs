@@ -19,7 +19,7 @@ fn main() {
     try_run(
         PlayerConfig::for_port(2),
         Bpm::new(2500),
-        vec![
+        &mut vec![
             s1.clone(),
             s1.clone().harmonize_down(&scale, Degree::Fourth),
             s1.clone().harmonize_up(&scale, Degree::Tenth),
