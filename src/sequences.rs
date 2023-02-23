@@ -25,16 +25,16 @@ impl Seq {
         };
     }
 
-    pub fn render(&self) -> FixedSeq {
-        let size = self.notes.len();
-        return FixedSeq {
-            seq: self.notes
-                .iter()
-                .map(|m| vec![*m])
-                .cycle()
-                .skip(self.head_position)
-                .take(size)
-                .collect::<Vec<Vec<Midi>>>()
+    pub fn render(&self) -> IterSeq {
+        return IterSeq {
+            iter: Box::new(
+                self.notes
+                    .clone()
+                    .into_iter()
+                    .map(|m| vec![m])
+                    .cycle()
+                    .skip(self.head_position)
+            )
         }
     }
 
@@ -179,21 +179,13 @@ impl Add<Interval> for Seq {
     }
 }
 
-pub struct FixedSeq {
-    seq: Vec<Vec<Midi>>
+pub struct IterSeq {
+    iter: Box<dyn Iterator<Item=Vec<Midi>>>
 }
 
-impl Midibox for FixedSeq {
-    fn update(&mut self) {
-
-    }
-
-    fn get(&self, i: usize) -> Option<Vec<Midi>> {
-        return self.seq.get(i).map(|it| it.clone())
-    }
-
-    fn len(&self) -> usize {
-        return self.seq.len()
+impl Midibox for IterSeq {
+    fn next(&mut self) -> Option<Vec<Midi>> {
+        return self.iter.next()
     }
 }
 

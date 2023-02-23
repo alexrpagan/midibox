@@ -75,7 +75,6 @@ impl Player {
     /// TODO: Sparse channel representations since snapshots of Player should be immutable.
     pub fn poll_channels(
         &mut self,
-        play_head_positions: &mut HashMap<usize, usize>,
         channels: &mut Vec<Box<dyn Midibox>>
     ) -> Vec<PlayingNote> {
         for (channel_id, note_channel) in channels.into_iter().enumerate() {
@@ -83,12 +82,7 @@ impl Player {
                 continue;
             }
 
-            let note_index = *(
-                play_head_positions.get(&channel_id)
-                .expect("missing play position for channel")
-            );
-
-            match note_channel.get(note_index) {
+            match note_channel.next() {
                 Some(notes) => {
                     debug!("Channel {} sent notes {:?}", channel_id, notes);
                     for note in notes {
@@ -105,7 +99,6 @@ impl Player {
                             note: note,
                         });
                     }
-                    play_head_positions.insert(channel_id, (note_index + 1) % note_channel.len());
                 }
                 None => {
                     error!("No input from channel {}", channel_id);
@@ -235,13 +228,8 @@ pub fn try_run(
 
     info!("Player Starting.");
     while running.load() {
-        for i in 0..(sequences.len()) {
-            sequences.get_mut(i)
-                .unwrap_or_else(|| panic!("failed to fetch midibox at position {}", i))
-                .update()
-        }
         debug!("Time: {}", player.time());
-        for note in player.poll_channels(&mut play_head_positions, sequences) {
+        for note in player.poll_channels(sequences) {
             route_note(&player_config, &mut port_id_to_conn, &note, NOTE_ON_MSG)
         }
         player.do_tick(&bpm);

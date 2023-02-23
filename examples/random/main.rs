@@ -18,23 +18,16 @@ impl RandomVelocity {
 }
 
 impl Midibox for RandomVelocity {
-    fn update(&mut self) {
+    fn next(&mut self) -> Option<Vec<Midi>> {
         let v = rand::thread_rng().gen_range(0..99);
         self.factor = (v as f64) / (100 as f64);
-    }
-
-    fn get(&self, i: usize) -> Option<Vec<Midi>> {
-        return self.midibox.get(i)
+        return self.midibox.next()
             .map(|it|
                 it.into_iter()
                     .map(|note| {
                         note.set_velocity((note.velocity as f64 * self.factor) as u8)
                     }).collect::<Vec<Midi>>()
             );
-    }
-
-    fn len(&self) -> usize {
-        return self.midibox.len();
     }
 }
 

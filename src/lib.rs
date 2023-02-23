@@ -30,14 +30,8 @@ impl Bpm {
     }
 }
 
-pub trait Midibox: Send + Sync {
-    fn update(&mut self);
-    fn get(&self, i: usize) -> Option<Vec<Midi>>;
-    fn len(&self) -> usize;
-}
-
-pub trait Named {
-    fn name() -> String;
+pub trait Midibox {
+    fn next(&mut self) -> Option<Vec<Midi>>;
 }
 
 pub trait ToMidi {
