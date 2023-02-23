@@ -1,11 +1,11 @@
 use midibox::{Bpm, Degree, Interval, Scale, Tone};
-use midibox::sequences::FixedSequence;
+use midibox::sequences::Seq;
 use midibox::player::{PlayerConfig, try_run};
 
 fn main() {
     let scale = Scale::major(Tone::Gb);
 
-    let s1 = FixedSequence::new(vec![
+    let s1 = Seq::new(vec![
         Tone::G.oct(2)  * 128,
         Tone::B.oct(2)  * 128,
         Tone::E.oct(2)  * 128,
