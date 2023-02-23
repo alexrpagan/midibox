@@ -1,5 +1,4 @@
 use std::ops::{Add, Sub};
-use std::sync::Arc;
 use crate::{Degree, Interval, Midi, Midibox, Scale, Tone};
 
 // A looping sequence of statically defined notes.
@@ -26,8 +25,21 @@ impl Seq {
         };
     }
 
-    pub fn midibox(&self) -> Arc<dyn Midibox> {
-        Arc::new(self.clone())
+    pub fn render(&self) -> FixedSeq {
+        let size = self.notes.len();
+        return FixedSeq {
+            seq: self.notes
+                .iter()
+                .map(|m| vec![*m])
+                .cycle()
+                .skip(self.head_position)
+                .take(size)
+                .collect::<Vec<Vec<Midi>>>()
+        }
+    }
+
+    pub fn midibox(&self) -> Box<dyn Midibox> {
+        Box::new(self.render())
     }
 
     pub fn len(&self) -> usize {
@@ -167,17 +179,17 @@ impl Add<Interval> for Seq {
     }
 }
 
-impl Midibox for Seq {
-    fn render(&self) -> Vec<Vec<Midi>> {
-        let size = self.notes.len();
-        return
-            self.notes
-                .iter()
-                .map(|m| vec![*m])
-                .cycle()
-                .skip(self.head_position)
-                .take(size)
-                .collect::<Vec<Vec<Midi>>>()
+pub struct FixedSeq {
+    seq: Vec<Vec<Midi>>
+}
+
+impl Midibox for FixedSeq {
+    fn get(&self, i: usize) -> Option<&Vec<Midi>> {
+        return self.seq.get(i)
+    }
+
+    fn len(&self) -> usize {
+        return self.seq.len()
     }
 }
 

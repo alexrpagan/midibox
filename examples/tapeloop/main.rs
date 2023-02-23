@@ -19,7 +19,7 @@ fn main() {
             BD.midi() * 3,
             BD.midi() * 4,
             BD.midi().set_velocity(80) * 1,
-        ]).midibox(),
+        ]),
         Seq::new(vec![
             Rest.midi() * 2,
             SD.midi().set_velocity(10) * 1,
@@ -28,20 +28,20 @@ fn main() {
             SD.midi().set_velocity(10) * 1,
             SD.midi().set_velocity(20) * 1,
             Rest.midi() * 1
-        ]).midibox(),
+        ]),
         Seq::new(vec![
             Rest.midi() * 1,
             LT.midi().set_velocity(70) * 1,
             Rest.midi() * 2,
             LT.midi().set_velocity(120) * 2,
             HT.midi().set_velocity(50) * 1,
-        ]).midibox(),
+        ]),
         Seq::new(vec![
             CH.midi().set_velocity(20) * 1,
             OH.midi().set_velocity(40) * 1,
             CH.midi().set_velocity(10) * 1,
             CH.midi().set_velocity(5) * 1,
-        ]).midibox()
+        ])
     ];
 
     for i in 0..drums.len() {
@@ -95,10 +95,10 @@ fn main() {
     assert_eq!(roots.total_duration(), harmony_2.total_duration());
 
     let synth = vec![
-        roots.clone().midibox(),
-        roots.clone().transpose_up(Interval::Perf5).midibox(),
-        harmony_1.clone().midibox(),
-        harmony_2.clone().midibox()
+        roots.clone(),
+        roots.clone().transpose_up(Interval::Perf5),
+        harmony_1.clone(),
+        harmony_2.clone(),
     ];
 
     for i in drums.len()..(drums.len() + synth.len()) {
@@ -111,6 +111,6 @@ fn main() {
     try_run(
         PlayerConfig::from_router(Box::new(MapRouter::new(channel_id_to_port_id))),
         Bpm::new(300),
-        all_seq
+        all_seq.into_iter().map(|it| it.midibox()).collect()
     ).unwrap()
 }
