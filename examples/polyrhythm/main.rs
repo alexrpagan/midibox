@@ -3,7 +3,7 @@ use Drumlogue::CP;
 use midibox::{Bpm, Degree, Interval, Scale, ToMidi, Tone};
 use midibox::drumlogue::Drumlogue;
 use midibox::drumlogue::Drumlogue::{BD, CH, LT, OH, SP1, SP2};
-use midibox::sequences::FixedSequence;
+use midibox::sequences::Seq;
 use midibox::player::{PlayerConfig, try_run};
 use midibox::router::MapRouter;
 use Tone::Rest;
@@ -18,7 +18,7 @@ fn main() {
     for i in 2..6 {
         channel_id_to_port_id.insert(i, 1);
     }
-    let sequence = FixedSequence::new(vec![
+    let sequence = Seq::new(vec![
         Tone::C.oct(3),
         Tone::G.oct(3),
         Tone::E.oct(2),
@@ -73,7 +73,7 @@ fn main() {
                     .transpose_up(Interval::Maj3)
             ).midibox(),
 
-            FixedSequence::new(vec![
+            Seq::new(vec![
                 BD.midi() * 1,
                 LT.midi() * 1,
                 BD.midi() * 1,
@@ -86,13 +86,13 @@ fn main() {
                 CP.midi() * 1,
                 BD.midi() * 3,
             ]).midibox(),
-            FixedSequence::new(vec![
+            Seq::new(vec![
                 Rest.midi() * 2,
                 LT.midi() * 4,
                 LT.midi() * 2,
                 LT.midi() * 2,
             ]).midibox(),
-            FixedSequence::new(vec![
+            Seq::new(vec![
                 CH.midi() * 1,
                 CH.midi() * 1,
                 OH.midi() * 1,
@@ -102,7 +102,7 @@ fn main() {
                 CH.midi() * 1,
                 OH.midi() * 1,
             ]).midibox(),
-            FixedSequence::new(vec![
+            Seq::new(vec![
                 SP1.midi() * 5
             ])
                 .split_notes(vec![true, false, false, false, true])

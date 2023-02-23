@@ -4,23 +4,23 @@ use crate::{Degree, Interval, Midi, Midibox, Scale, Tone};
 
 // A looping sequence of statically defined notes.
 #[derive(Debug, Clone)]
-pub struct FixedSequence {
+pub struct Seq {
     /// The notes that can be produced by a sequence
     notes: Vec<Midi>,
     /// The index of the play head into notes
     head_position: usize,
 }
 
-impl FixedSequence {
+impl Seq {
     pub fn new(notes: Vec<Midi>) -> Self {
-        return FixedSequence {
+        return Seq {
             notes,
             head_position: 0,
         };
     }
 
     pub fn empty() -> Self {
-        return FixedSequence {
+        return Seq {
             notes: Vec::new(),
             head_position: 0,
         };
@@ -144,31 +144,31 @@ impl FixedSequence {
     }
 }
 
-impl Add<FixedSequence> for FixedSequence {
-    type Output = FixedSequence;
+impl Add<Seq> for Seq {
+    type Output = Seq;
 
-    fn add(self, rhs: FixedSequence) -> Self::Output {
+    fn add(self, rhs: Seq) -> Self::Output {
         return self.clone().extend(&rhs.clone());
     }
 }
 
-impl Sub<Interval> for FixedSequence {
-    type Output = FixedSequence;
+impl Sub<Interval> for Seq {
+    type Output = Seq;
 
     fn sub(self, rhs: Interval) -> Self::Output {
         return self.transpose_down(rhs);
     }
 }
 
-impl Add<Interval> for FixedSequence {
-    type Output = FixedSequence;
+impl Add<Interval> for Seq {
+    type Output = Seq;
 
     fn add(self, rhs: Interval) -> Self::Output {
         return self.transpose_up(rhs);
     }
 }
 
-impl Midibox for FixedSequence {
+impl Midibox for Seq {
     fn render(&self) -> Vec<Vec<Midi>> {
         let size = self.notes.len();
         return

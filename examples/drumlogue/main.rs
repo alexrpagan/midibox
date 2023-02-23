@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use midibox::{Bpm, Scale, Tone, Degree};
 use midibox::drumlogue::Drumlogue::{BD, CH, CP, HT, LT, OH, RS, SD};
 use midibox::Interval::Oct;
-use midibox::sequences::FixedSequence;
+use midibox::sequences::Seq;
 use midibox::player::{PlayerConfig, try_run};
 use midibox::router::MapRouter;
 use midibox::Tone::Rest;
@@ -21,7 +21,7 @@ fn main() {
 
     let scale = Scale::major(Tone::D);
 
-    let bass_seq = FixedSequence::new(vec![
+    let bass_seq = Seq::new(vec![
         Tone::D.oct(2) * 16,
         Tone::E.oct(2) * 16,
         Tone::Gb.oct(2) * 16,
@@ -46,16 +46,16 @@ fn main() {
         PlayerConfig::from_router(Box::new(MapRouter::new(channel_id_to_port_id))),
         Bpm::new(450),
         vec![
-            FixedSequence::new(vec![
+            Seq::new(vec![
                 RS.midi().set_velocity(30) * 1,
                 Rest.midi() * 2,
                 Rest.midi() * 4
             ]),
-            FixedSequence::new(vec![
+            Seq::new(vec![
                 Rest.midi() * 1,
                 CH.midi().set_velocity(15) * 2
             ]),
-            FixedSequence::new(vec![
+            Seq::new(vec![
                 BD.midi().set_velocity(100) * 8,
                 BD.midi().set_velocity(50) * 1,
                 BD.midi().set_velocity(70) * 1,
@@ -66,28 +66,28 @@ fn main() {
                 BD.midi().set_velocity(15) * 1,
                 BD.midi().set_velocity(20) * 1,
             ]),
-            FixedSequence::new(vec![
+            Seq::new(vec![
                 Rest.midi() * 4,
                 SD.midi() * 4,
             ]),
-            FixedSequence::new(vec![
+            Seq::new(vec![
                 Rest.midi() * 12,
                 CP.midi() * 4,
             ]),
-            FixedSequence::new(vec![
+            Seq::new(vec![
                 Rest.midi() * 8,
                 HT.midi().set_velocity(30) * 1,
                 LT.midi().set_velocity(70) * 1,
                 Rest.midi() * 4
             ]),
-            FixedSequence::new(vec![
+            Seq::new(vec![
                 Rest.midi() * 8,
                 Rest.midi() * 2,
                 BD.midi().set_velocity(30) * 1,
                 BD.midi().set_velocity(100) * 1,
                 Rest.midi() * 2
             ]),
-            FixedSequence::new(vec![
+            Seq::new(vec![
                 Rest.midi() * 2,
                 CH.midi().set_velocity(40) * 2,
                 Rest.midi() * 2,
@@ -96,7 +96,7 @@ fn main() {
                 OH.midi().set_velocity(42) * 1,
                 CH.midi().set_velocity(43) * 1,
             ]),
-            FixedSequence::new(vec![
+            Seq::new(vec![
                 Tone::Gb.oct(3) * 8,
                 Tone::D.oct(3) * 7,
                 Tone::Gb.oct(2) * 6,
