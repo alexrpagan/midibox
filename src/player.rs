@@ -194,6 +194,10 @@ pub fn try_run(
     let midi_out = MidiOutput::new("Midi Outputs")?;
     let out_ports = midi_out.ports();
 
+    for (i, p) in out_ports.iter().enumerate() {
+        info!("{}: {}", i, midi_out.port_name(p).unwrap());
+    }
+
     let required_ports = player_config.required_ports();
     let mut port_id_to_conn: HashMap<usize, MidiOutputConnection> =
         HashMap::with_capacity(required_ports.len());
