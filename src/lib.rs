@@ -26,8 +26,8 @@ impl Meter for Bpm {
 }
 
 impl Bpm {
-    pub fn new(bpm: u32) -> Box<dyn Meter> {
-        Box::new(Bpm { bpm })
+    pub fn new(bpm: u32) -> Self {
+        Bpm { bpm }
     }
 }
 
@@ -47,7 +47,7 @@ pub struct Scale {
 
 impl Scale {
     pub fn major(root: Tone) -> Self {
-        return Scale {
+        Scale {
             root,
             intervals: vec![
                 2, // Whole step
@@ -58,7 +58,7 @@ impl Scale {
                 2, // W
                 1, // H
             ],
-        };
+        }
     }
 
     pub fn tones(&self) -> Vec<Tone> {
@@ -73,7 +73,7 @@ impl Scale {
                 midi.last().unwrap().u8_maybe().map(|v| v + interval)
             ))
         }
-        return midi;
+        midi
     }
 
     pub fn harmonize_up(&self, midi: Midi, harmonize: Degree) -> Option<Midi> {
@@ -146,7 +146,7 @@ pub enum Degree {
 
 impl Degree {
     fn steps(&self) -> usize {
-        return match self {
+        match self {
             Degree::Unison => 0,
             Degree::Second => 1,
             Degree::Third => 2,
@@ -160,7 +160,7 @@ impl Degree {
             Degree::Eleventh => 10,
             Degree::Twelveth => 11,
             Degree::Thirteenth => 12
-        };
+        }
     }
 }
 
@@ -224,12 +224,12 @@ pub struct Midi {
 
 impl Midi {
     pub fn rest() -> Self {
-        return Midi {
+        Midi {
             tone: Tone::Rest,
             oct: DEFAULT_OCT,
             velocity: DEFAULT_VELOCITY,
             duration: DEFAULT_DURATION,
-        };
+        }
     }
 
     pub fn oct(val: u8) -> u8 {
@@ -244,18 +244,15 @@ impl Midi {
     }
 
     pub fn from_tone(tone: Tone, oct: u8) -> Midi {
-        return Midi { tone, oct, velocity: DEFAULT_VELOCITY, duration: DEFAULT_DURATION };
+        Midi { tone, oct, velocity: DEFAULT_VELOCITY, duration: DEFAULT_DURATION }
     }
 
     pub fn from(val: u8) -> Midi {
-        return Midi::from_tone(Tone::from(val), Midi::oct(val));
+        Midi::from_tone(Tone::from(val), Midi::oct(val))
     }
 
     pub fn is_rest(&self) -> bool {
-        return match self.tone {
-            Tone::Rest => true,
-            _ => false
-        };
+        matches!(self.tone, Tone::Rest)
     }
 
     pub fn u8_maybe(&self) -> Option<u8> {
@@ -263,11 +260,11 @@ impl Midi {
     }
 
     pub fn set_velocity(&self, velocity: u8) -> Self {
-        return Midi { tone: self.tone, oct: self.oct, velocity, duration: self.duration };
+        Midi { tone: self.tone, oct: self.oct, velocity, duration: self.duration }
     }
 
     pub fn set_duration(&self, duration: u32) -> Self {
-        return Midi { tone: self.tone, oct: self.oct, velocity: self.velocity, duration };
+        Midi { tone: self.tone, oct: self.oct, velocity: self.velocity, duration }
     }
 
     pub fn set_pitch_u8(&self, val: Option<u8>) -> Self {
@@ -278,7 +275,7 @@ impl Midi {
     }
 
     pub fn set_pitch(&self, tone: Tone, oct: u8) -> Self {
-        return Midi { tone, oct, velocity: self.velocity, duration: self.duration };
+        Midi { tone, oct, velocity: self.velocity, duration: self.duration }
     }
 
     pub fn transpose_up(&self, interval: Interval) -> Self {
@@ -295,7 +292,7 @@ impl Add<Interval> for Midi {
     type Output = Midi;
 
     fn add(self, rhs: Interval) -> Self::Output {
-        return self.transpose_up(rhs);
+        self.transpose_up(rhs)
     }
 }
 
@@ -304,7 +301,7 @@ impl Sub<Interval> for Midi {
     type Output = Midi;
 
     fn sub(self, rhs: Interval) -> Self::Output {
-        return self.transpose_down(rhs);
+        self.transpose_down(rhs)
     }
 }
 
@@ -313,7 +310,7 @@ impl Mul<u32> for Midi {
     type Output = Midi;
 
     fn mul(self, rhs: u32) -> Self::Output {
-        return self.clone().set_duration(self.duration * rhs);
+        self.clone().set_duration(self.duration * rhs)
     }
 }
 
@@ -374,18 +371,18 @@ impl Tone {
     }
 
     pub fn get(&self) -> Midi {
-        return self.oct(4);
+        self.oct(4)
     }
 
     pub fn oct(&self, oct: u8) -> Midi {
-        return Midi::from_tone(self.clone(), oct);
+        Midi::from_tone(*self, oct)
     }
 }
 
 impl ToMidi for Tone {
     fn midi(&self) -> Midi {
         // C should be set to middle C, i.e., C4
-        return self.oct(4);
+        self.oct(4)
     }
 }
 

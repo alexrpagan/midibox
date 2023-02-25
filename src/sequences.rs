@@ -12,21 +12,21 @@ pub struct Seq {
 
 impl Seq {
     pub fn new(notes: Vec<Midi>) -> Self {
-        return Seq {
+        Seq {
             notes,
             head_position: 0,
-        };
+        }
     }
 
     pub fn empty() -> Self {
-        return Seq {
+        Seq {
             notes: Vec::new(),
             head_position: 0,
-        };
+        }
     }
 
     pub fn render(&self) -> IterSeq {
-        return IterSeq {
+        IterSeq {
             iter: Box::new(
                 self.notes
                     .clone()
@@ -44,6 +44,10 @@ impl Seq {
 
     pub fn len(&self) -> usize {
         self.notes.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.notes.is_empty()
     }
 
     pub fn total_duration(&self) -> u32 {
@@ -127,9 +131,9 @@ impl Seq {
     pub fn split_to_ticks(mut self) -> Self {
         self.notes = self.notes.into_iter().flat_map(|m| {
             let old_duration = m.duration as usize;
-            return vec![m.set_duration(1)].repeat(old_duration).into_iter();
+            vec![m.set_duration(1)].repeat(old_duration).into_iter()
         }).collect::<Vec<Midi>>();
-        return self;
+        self
     }
 
     /// mask is a sequence of bits representing notes to play or mute
@@ -141,11 +145,11 @@ impl Seq {
     pub fn mask(mut self, mask: Vec<bool>) -> Self {
         self.notes = self.notes.into_iter()
             .zip(mask.into_iter().cycle()).map(|(midi, should_play)| {
-            return if should_play {
+            if should_play {
                 midi
             } else {
                 midi.set_pitch(Tone::Rest, 4)
-            };
+            }
         }).collect();
         self
     }
@@ -159,7 +163,7 @@ impl Add<Seq> for Seq {
     type Output = Seq;
 
     fn add(self, rhs: Seq) -> Self::Output {
-        return self.clone().extend(&rhs.clone());
+        self.extend(&rhs)
     }
 }
 
@@ -167,7 +171,7 @@ impl Sub<Interval> for Seq {
     type Output = Seq;
 
     fn sub(self, rhs: Interval) -> Self::Output {
-        return self.transpose_down(rhs);
+        self.transpose_down(rhs)
     }
 }
 
@@ -175,7 +179,7 @@ impl Add<Interval> for Seq {
     type Output = Seq;
 
     fn add(self, rhs: Interval) -> Self::Output {
-        return self.transpose_up(rhs);
+        self.transpose_up(rhs)
     }
 }
 
@@ -185,9 +189,6 @@ pub struct IterSeq {
 
 impl Midibox for IterSeq {
     fn next(&mut self) -> Option<Vec<Midi>> {
-        return self.iter.next()
+        self.iter.next()
     }
 }
-
-
-

@@ -102,7 +102,7 @@ fn main() {
     ];
 
     for i in drums.len()..(drums.len() + synth.len()) {
-        channel_id_to_port_id.insert(i, 2);
+        channel_id_to_port_id.insert(i, 0);
     }
 
     let mut all_seq = drums.clone();
@@ -110,7 +110,7 @@ fn main() {
 
     try_run(
         PlayerConfig::from_router(Box::new(MapRouter::new(channel_id_to_port_id))),
-        Bpm::new(300),
+        &Bpm::new(300),
         &mut all_seq.into_iter().map(|it| it.midibox()).collect()
     ).unwrap()
 }

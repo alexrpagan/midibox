@@ -10,11 +10,11 @@ use Tone::Rest;
 
 fn main() {
     let mut channel_id_to_port_id : HashMap<usize, usize> = HashMap::new();
-    // Bank A 07 Rolling
-    for i in 0..2 {
-        channel_id_to_port_id.insert(i, 2);
-    }
     // preset 494, 21
+    for i in 0..2 {
+        channel_id_to_port_id.insert(i, 0);
+    }
+    // Bank A 07 Rolling
     for i in 2..6 {
         channel_id_to_port_id.insert(i, 1);
     }
@@ -34,7 +34,7 @@ fn main() {
 
     try_run(
         PlayerConfig::from_router(Box::new(MapRouter::new(channel_id_to_port_id))),
-        Bpm::new(500),
+        &Bpm::new(500),
         &mut vec![
             (
                 fast.clone()

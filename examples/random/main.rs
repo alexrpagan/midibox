@@ -20,7 +20,7 @@ fn main() {
 
     try_run(
         PlayerConfig::for_port(0),
-        Bpm::new(600),
+        &Bpm::new(600),
         &mut vec![
             s1.clone().split_notes(vec![true, false, false]),
             s1.clone().harmonize_down(&scale, Degree::Fourth).split_notes(vec![false, true, false]),
