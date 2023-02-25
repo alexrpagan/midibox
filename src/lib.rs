@@ -5,6 +5,7 @@ pub mod sequences;
 pub mod player;
 pub mod router;
 pub mod drumlogue;
+pub mod rand;
 
 pub const NOTE_ON_MSG: u8 = 0x90;
 pub const NOTE_OFF_MSG: u8 = 0x80;
