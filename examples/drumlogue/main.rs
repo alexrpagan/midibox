@@ -16,7 +16,7 @@ fn main() {
     }
     // Minilogue preset 440
     for i in 8..11 {
-        channel_id_to_port_id.insert(i, 2);
+        channel_id_to_port_id.insert(i, 0);
     }
 
     let _scale = Scale::major(Tone::D);
@@ -44,7 +44,7 @@ fn main() {
 
     try_run(
         PlayerConfig::from_router(Box::new(MapRouter::new(channel_id_to_port_id))),
-        Bpm::new(450),
+        &Bpm::new(450),
         &mut vec![
             Seq::new(vec![
                 RS.midi().set_velocity(30) * 1,

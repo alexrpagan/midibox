@@ -20,13 +20,13 @@ impl StaticRouter {
 
 impl Router for StaticRouter {
     fn route(&self, _: usize) -> Option<&usize> {
-        return Some(&(self.port_id));
+        Some(&(self.port_id))
     }
 
     fn required_ports(&self) -> HashSet<usize> {
         let mut distinct_port_ids: HashSet<usize> = HashSet::new();
         distinct_port_ids.insert(self.port_id);
-        return distinct_port_ids;
+        distinct_port_ids
     }
 }
 
@@ -37,7 +37,7 @@ pub struct MapRouter {
 
 impl MapRouter {
     pub fn new(channel_id_to_port_id: HashMap<usize, usize>) -> Self {
-        return MapRouter {
+        MapRouter {
             channel_id_to_port_id
         }
     }
@@ -50,8 +50,8 @@ impl Router for MapRouter {
 
     fn required_ports(&self) -> HashSet<usize> {
         let mut distinct_port_ids: HashSet<usize> = HashSet::new();
-        distinct_port_ids.extend(self.channel_id_to_port_id.values().into_iter());
-        return distinct_port_ids;
+        distinct_port_ids.extend(self.channel_id_to_port_id.values());
+        distinct_port_ids
     }
 }
 

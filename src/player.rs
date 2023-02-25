@@ -39,10 +39,10 @@ impl Player {
 
     /// Increment and return the tick_id, after sleeping for the required duration.
     /// Meter describes the tempo that the player should use during playback.
-    pub fn do_tick(&mut self, meter: &Box<dyn Meter>) -> u64 {
+    pub fn do_tick(&mut self, meter: &dyn Meter) -> u64 {
         self.tick_id += 1;
         sleep(meter.tick_duration());
-        return self.tick_id;
+        self.tick_id
     }
 
     /// Gets the current time in ticks since start
@@ -59,30 +59,18 @@ impl Player {
             .count() == 0
     }
 
-    /// Determines which notes to play at a point in time based on a set of channels and play-head
-    /// positions.
-    ///
-    /// Channels are played concurrently -- the player will cycle through each channel in lockstep,
-    /// and emit all notes at the position corresponding to the current play time. There is no limit
-    /// on the number of channels that can be played concurrently (subject to tempo and hardware
-    /// limitations). Channels may have different lengths.
-    ///
-    /// Concretely, a channel is `Vec<Vec<Midi>>` where each position in the outermost vec
-    /// represents notes to be played instantaneously in a single tick. When each position of the
-    /// channel has been played, the play head will loop back to the beginning.
-    ///
     /// TODO: Testing for multiple notes of different durations.
     /// TODO: Sparse channel representations since snapshots of Player should be immutable.
     pub fn poll_channels(
         &mut self,
-        channels: &mut Vec<Box<dyn Midibox>>
+        channels: &mut [Box<dyn Midibox>]
     ) -> Vec<PlayingNote> {
-        for (channel_id, note_channel) in channels.into_iter().enumerate() {
+        for (channel_id, channel) in channels.iter_mut().enumerate() {
             if !self.should_poll_channel(channel_id) {
                 continue;
             }
 
-            match note_channel.next() {
+            match channel.next() {
                 Some(notes) => {
                     debug!("Channel {} sent notes {:?}", channel_id, notes);
                     for note in notes {
@@ -96,7 +84,7 @@ impl Player {
                         self.playing_notes.insert(note_id, PlayingNote {
                             channel_id,
                             start_tick_id: self.tick_id,
-                            note: note,
+                            note,
                         });
                     }
                 }
@@ -111,20 +99,19 @@ impl Player {
             self.playing_notes
                 .values()
                 .filter(|note| note.start_tick_id == self.tick_id)
-                .map(|note| note)
         );
         notes
     }
 
     pub fn clear_elapsed_notes(&mut self) -> Vec<PlayingNote> {
         let current_tick = self.tick_id;
-        return self.clear_notes(|note| {
-            return note.start_tick_id + (note.note.duration as u64) == current_tick;
-        });
+        self.clear_notes(|note| {
+            note.start_tick_id + (note.note.duration as u64) == current_tick
+        })
     }
 
     pub fn clear_all_notes(&mut self) -> Vec<PlayingNote> {
-        return self.clear_notes(|_| true);
+        self.clear_notes(|_| true)
     }
 
     fn clear_notes<F>(&mut self, should_clear: F) -> Vec<PlayingNote> where
@@ -139,6 +126,12 @@ impl Player {
         }
 
         notes
+    }
+}
+
+impl Default for Player {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -168,16 +161,16 @@ impl PlayerConfig {
 
 impl Router for PlayerConfig {
     fn route(&self, channel_id: usize) -> Option<&usize> {
-        return self.router.route(channel_id);
+        self.router.route(channel_id)
     }
 
     fn required_ports(&self) -> HashSet<usize> {
-        return self.router.required_ports();
+        self.router.required_ports()
     }
 }
 
-pub fn run(bpm: Box<dyn Meter>, sequences: &mut Vec<Box<dyn Midibox>>) {
-    match try_run(PlayerConfig::empty(), bpm, sequences) {
+pub fn run(bpm: &dyn Meter, channels: &mut Vec<Box<dyn Midibox>>) {
+    match try_run(PlayerConfig::empty(), bpm, channels) {
         Ok(_) => (),
         Err(err) => println!("Error: {}", err)
     }
@@ -185,8 +178,8 @@ pub fn run(bpm: Box<dyn Meter>, sequences: &mut Vec<Box<dyn Midibox>>) {
 
 pub fn try_run(
     player_config: PlayerConfig,
-    bpm: Box<dyn Meter>,
-    sequences: &mut Vec<Box<dyn Midibox>>
+    bpm: &dyn Meter,
+    channels: &mut Vec<Box<dyn Midibox>>
 ) -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
@@ -213,15 +206,6 @@ pub fn try_run(
         }
     }
 
-    // render sequences to their concrete values
-    let n_sequences = sequences.len();
-
-    // initialize play positions for all channels to start (i.e., 0)
-    let mut play_head_positions: HashMap<usize, usize> = HashMap::new();
-    for i in 0..n_sequences {
-        play_head_positions.insert(i, 0);
-    }
-
     let running = Arc::new(AtomicCell::new(true));
 
     // Set up listener for ctrl-C command
@@ -233,10 +217,10 @@ pub fn try_run(
     info!("Player Starting.");
     while running.load() {
         debug!("Time: {}", player.time());
-        for note in player.poll_channels(sequences) {
+        for note in player.poll_channels(channels) {
             route_note(&player_config, &mut port_id_to_conn, &note, NOTE_ON_MSG)
         }
-        player.do_tick(&bpm);
+        player.do_tick(bpm);
         for note in player.clear_elapsed_notes() {
             route_note(&player_config, &mut port_id_to_conn, &note, NOTE_OFF_MSG)
         }

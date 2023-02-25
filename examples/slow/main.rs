@@ -17,8 +17,8 @@ fn main() {
     ]).transpose_down(Interval::Min2);
 
     try_run(
-        PlayerConfig::for_port(2),
-        Bpm::new(2500),
+        PlayerConfig::for_port(0),
+        &Bpm::new(2500),
         &mut vec![
             s1.clone(),
             s1.clone().harmonize_down(&scale, Degree::Fourth),
