@@ -11,37 +11,37 @@ fn main() {
     // H 03
     let drums = vec![
         Seq::new(vec![
-            BD.midi() * 8,
-            BD.midi() * 7,
-            BD.midi().set_velocity(50) * 1,
-            BD.midi() * 2,
-            BD.midi() * 5,
-            BD.midi().set_velocity(50) * 1,
-            BD.midi() * 3,
-            BD.midi() * 4,
-            BD.midi().set_velocity(80) * 1,
+            BD * 8,
+            BD * 7,
+            BD.set_velocity(50) * 1,
+            BD * 2,
+            BD * 5,
+            BD.set_velocity(50) * 1,
+            BD * 3,
+            BD * 4,
+            BD.set_velocity(80) * 1,
         ]),
         Seq::new(vec![
-            Rest.midi() * 2,
-            SD.midi().set_velocity(10) * 1,
-            SD.midi().set_velocity(20) * 1,
-            Rest.midi() * 1,
-            SD.midi().set_velocity(10) * 1,
-            SD.midi().set_velocity(20) * 1,
-            Rest.midi() * 1
+            Rest * 2,
+            SD.set_velocity(10) * 1,
+            SD.set_velocity(20) * 1,
+            Rest * 1,
+            SD.set_velocity(10) * 1,
+            SD.set_velocity(20) * 1,
+            Rest * 1
         ]),
         Seq::new(vec![
-            Rest.midi() * 1,
-            LT.midi().set_velocity(70) * 1,
-            Rest.midi() * 2,
-            LT.midi().set_velocity(120) * 2,
-            HT.midi().set_velocity(50) * 1,
+            Rest * 1,
+            LT.set_velocity(70) * 1,
+            Rest * 2,
+            LT.set_velocity(120) * 2,
+            HT.set_velocity(50) * 1,
         ]),
         Seq::new(vec![
-            CH.midi().set_velocity(20) * 1,
-            OH.midi().set_velocity(30) * 1,
-            CH.midi().set_velocity(10) * 1,
-            CH.midi().set_velocity(5) * 1,
+            CH.set_velocity(20) * 1,
+            OH.set_velocity(30) * 1,
+            CH.set_velocity(10) * 1,
+            CH.set_velocity(5) * 1,
         ])
     ];
 
@@ -50,7 +50,7 @@ fn main() {
     }
 
     let roots = Seq::new(vec![
-        Rest.midi() * 1,
+        Rest * 1,
         Tone::D.oct(2).set_velocity(60) * 2,
         Tone::D.oct(2).set_velocity(70) * 3,
         Tone::D.oct(2).set_velocity(80) * 1,
@@ -68,28 +68,28 @@ fn main() {
     ]);
 
     let harmony_1 =  Seq::new(vec![
-        Rest.midi() * 7,
-        Rest.midi() * 7,
+        Rest * 7,
+        Rest * 7,
         Tone::A.oct(3).set_velocity(50) * 20,
-        Rest.midi() * 7,
-        Rest.midi() * 4,
+        Rest * 7,
+        Rest * 4,
         Tone::Gb.oct(3) * 7,
-        Rest.midi() * 7,
-        Rest.midi() * 4,
+        Rest * 7,
+        Rest * 4,
         Tone::Ab.midi().set_velocity(30) * 7
     ]);
 
     let harmony_2 =  Seq::new(vec![
-        Rest.midi() * 7,
-        Rest.midi() * 7,
-        Rest.midi() * 4,
+        Rest * 7,
+        Rest * 7,
+        Rest * 4,
         Tone::B.oct(3).set_velocity(40) * 16,
-        Rest.midi() * 7,
-        Rest.midi() * 4,
+        Rest * 7,
+        Rest * 4,
         Tone::Gb.oct(3) * 7,
-        Rest.midi() * 7,
-        Rest.midi() * 7,
-        Tone::Gb.midi().set_velocity(40) * 4
+        Rest * 7,
+        Rest * 7,
+        Tone::Gb.set_velocity(40) * 4
     ]);
 
     assert_eq!(roots.total_duration(), harmony_1.total_duration());
