@@ -107,7 +107,7 @@ fn main() {
                 Tone::B.oct(2) * (8 + 2),
                 Tone::A.oct(2) * 4,
             ]).transpose_up(Oct),
-            bass_seq.clone().split_notes(bass_mask.clone()),
+            bass_seq.clone().split_notes(&bass_mask),
         ].into_iter().map(|seq| seq.midibox()).collect()
     ).unwrap()
 }

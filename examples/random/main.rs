@@ -69,13 +69,13 @@ fn main() {
 
     let synth: Vec<_> = vec![
         roots.clone()
-            .split_notes(vec![true, false, false]),
+            .split_notes(&vec![true, false, false]),
         roots.clone().harmonize_down(&scale, Degree::Fourth)
-            .split_notes(vec![false, true, false]),
+            .split_notes(&vec![false, true, false]),
         roots.clone().harmonize_up(&scale, Degree::Tenth)
-            .split_notes(vec![true, false, true]),
+            .split_notes(&vec![true, false, true]),
         roots.clone().harmonize_up(&scale, Degree::Seventh)
-            .split_notes(vec![false, false, false, true]),
+            .split_notes(&vec![false, false, false, true]),
     ].into_iter().map(|seq| RandomVelocity::wrap(seq.midibox())).collect();
 
     for i in 0..drums.len() {

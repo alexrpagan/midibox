@@ -27,7 +27,7 @@ fn main() {
     let roots =
         sequence.clone() + sequence.clone().harmonize_up(&Scale::major(Tone::C), Degree::Third);
 
-    let fast = roots.clone().duration(2).split_notes(vec![true, false]).repeat(5);
+    let fast = roots.clone().duration(2).split_notes(&vec![true, false]).repeat(5);
     let slow_ff1 = roots.clone().duration(5).repeat(2);
 
     assert_eq!(fast.total_duration(), slow_ff1.total_duration());
@@ -48,24 +48,24 @@ fn main() {
             ).midibox(),
             (
                 slow_ff1.clone()
-                    .split_notes(vec![true, false, false])
+                    .split_notes(&vec![true, false, false])
                     + slow_ff1.clone()
-                    .split_notes(vec![false, true, false, false, true])
+                    .split_notes(&vec![false, true, false, false, true])
                     .transpose_down(Interval::Perf4)
                     + slow_ff1.clone()
-                    .split_notes(vec![true, false, false])
+                    .split_notes(&vec![true, false, false])
                     + slow_ff1.clone()
-                    .split_notes(vec![false, true, false, false, true])
+                    .split_notes(&vec![false, true, false, false, true])
                     .transpose_down(Interval::Min3)
                     + slow_ff1.clone()
-                    .split_notes(vec![true, false, false])
+                    .split_notes(&vec![true, false, false])
                     + slow_ff1.clone()
-                    .split_notes(vec![false, true, false, false, true])
+                    .split_notes(&vec![false, true, false, false, true])
                     .transpose_down(Interval::Min2)
                     + slow_ff1.clone()
-                    .split_notes(vec![true, false, false])
+                    .split_notes(&vec![true, false, false])
                     + slow_ff1.clone()
-                    .split_notes(vec![false, true, false, false, true])
+                    .split_notes(&vec![false, true, false, false, true])
                     .transpose_up(Interval::Maj3)
             ).midibox(),
 
@@ -101,7 +101,7 @@ fn main() {
             Seq::new(vec![
                 SP1 * 5
             ])
-                .split_notes(vec![true, false, false, false, true])
+                .split_notes(&vec![true, false, false, false, true])
                 .midibox()
         ]
     ).unwrap()
