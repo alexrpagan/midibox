@@ -142,10 +142,10 @@ impl Seq {
     ///
     /// The mask will be applied starting from the first note of the sequence and will repeat to
     /// match the total number of notes in this sequence.
-    pub fn mask(mut self, mask: Vec<bool>) -> Self {
+    pub fn mask(mut self, mask: &Vec<bool>) -> Self {
         self.notes = self.notes.into_iter()
             .zip(mask.into_iter().cycle()).map(|(midi, should_play)| {
-            if should_play {
+            if *should_play {
                 midi
             } else {
                 midi.set_pitch(Tone::Rest, 4)
@@ -154,7 +154,7 @@ impl Seq {
         self
     }
 
-    pub fn split_notes(self, mask: Vec<bool>) -> Self {
+    pub fn split_notes(self, mask: &Vec<bool>) -> Self {
         self.split_to_ticks().mask(mask)
     }
 }

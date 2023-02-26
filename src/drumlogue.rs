@@ -37,7 +37,6 @@ impl Mul<u32> for Drumlogue {
     type Output = Midi;
 
     fn mul(self, rhs: u32) -> Self::Output {
-        let midi = self.midi();
-        midi.set_duration(midi.duration * rhs)
+        self.midi() * rhs
     }
 }
