@@ -47,54 +47,54 @@ fn main() {
         &Bpm::new(450),
         &mut vec![
             Seq::new(vec![
-                RS.midi().set_velocity(30) * 1,
-                Rest.midi() * 2,
-                Rest.midi() * 4
+                RS.set_velocity(30) * 1,
+                Rest * 2,
+                Rest * 4
             ]),
             Seq::new(vec![
-                Rest.midi() * 1,
-                CH.midi().set_velocity(15) * 2
+                Rest * 1,
+                CH.set_velocity(15) * 2
             ]),
             Seq::new(vec![
-                BD.midi().set_velocity(100) * 8,
-                BD.midi().set_velocity(50) * 1,
-                BD.midi().set_velocity(70) * 1,
-                Rest.midi() * 7,
-                BD.midi() * 8,
-                BD.midi() * 4,
-                BD.midi() * 2,
-                BD.midi().set_velocity(15) * 1,
-                BD.midi().set_velocity(20) * 1,
+                BD.set_velocity(100) * 8,
+                BD.set_velocity(50) * 1,
+                BD.set_velocity(70) * 1,
+                Rest * 7,
+                BD * 8,
+                BD * 4,
+                BD * 2,
+                BD.set_velocity(15) * 1,
+                BD.set_velocity(20) * 1,
             ]),
             Seq::new(vec![
-                Rest.midi() * 4,
-                SD.midi() * 4,
+                Rest * 4,
+                SD * 4,
             ]),
             Seq::new(vec![
-                Rest.midi() * 12,
-                CP.midi() * 4,
+                Rest * 12,
+                CP * 4,
             ]),
             Seq::new(vec![
-                Rest.midi() * 8,
-                HT.midi().set_velocity(30) * 1,
-                LT.midi().set_velocity(70) * 1,
-                Rest.midi() * 4
+                Rest * 8,
+                HT.set_velocity(30) * 1,
+                LT.set_velocity(70) * 1,
+                Rest * 4
             ]),
             Seq::new(vec![
-                Rest.midi() * 8,
-                Rest.midi() * 2,
-                BD.midi().set_velocity(30) * 1,
-                BD.midi().set_velocity(100) * 1,
-                Rest.midi() * 2
+                Rest * 8,
+                Rest * 2,
+                BD.set_velocity(30) * 1,
+                BD.set_velocity(100) * 1,
+                Rest * 2
             ]),
             Seq::new(vec![
-                Rest.midi() * 2,
-                CH.midi().set_velocity(40) * 2,
-                Rest.midi() * 2,
-                CH.midi().set_velocity(44) * 2,
-                Rest.midi() * 2,
-                OH.midi().set_velocity(42) * 1,
-                CH.midi().set_velocity(43) * 1,
+                Rest * 2,
+                CH.set_velocity(40) * 2,
+                Rest * 2,
+                CH.set_velocity(44) * 2,
+                Rest * 2,
+                OH.set_velocity(42) * 1,
+                CH.set_velocity(43) * 1,
             ]),
             Seq::new(vec![
                 Tone::Gb.oct(3) * 8,
