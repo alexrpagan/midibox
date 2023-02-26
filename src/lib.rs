@@ -67,7 +67,7 @@ pub trait ToMidi {
     }
 
     fn transpose_down(&self, interval: Interval) -> Midi {
-        self.transpose_down(interval)
+        self.midi().transpose_down(interval)
     }
 }
 

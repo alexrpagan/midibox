@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use Drumlogue::CP;
-use midibox::{Bpm, Degree, Interval, Scale, ToMidi, Tone};
+use midibox::{Bpm, Degree, Interval, Scale, Tone};
 use midibox::drumlogue::Drumlogue;
 use midibox::drumlogue::Drumlogue::{BD, CH, LT, OH, SP1};
 use midibox::sequences::Seq;
@@ -34,8 +34,8 @@ fn main() {
 
     try_run(
         PlayerConfig::from_router(Box::new(MapRouter::new(channel_id_to_port_id))),
-        &Bpm::new(500),
-        &mut vec![
+        &Bpm::new( 500),
+        & mut vec![
             (
                 fast.clone()
                     + fast.clone().transpose_down(Interval::Perf4)
@@ -70,36 +70,36 @@ fn main() {
             ).midibox(),
 
             Seq::new(vec![
-                BD.midi() * 1,
-                LT.midi() * 1,
-                BD.midi() * 1,
-                BD.midi() * 1,
-                CP.midi() * 2,
-                Rest.midi() * 2,
-                BD.midi() * 2,
-                BD.midi() * 1,
-                BD.midi() * 1,
-                CP.midi() * 1,
-                BD.midi() * 3,
+                BD * 1,
+                LT * 1,
+                BD * 1,
+                BD * 1,
+                CP * 2,
+                Rest * 2,
+                BD * 2,
+                BD * 1,
+                BD * 1,
+                CP * 1,
+                BD * 3,
             ]).midibox(),
             Seq::new(vec![
-                Rest.midi() * 2,
-                LT.midi() * 4,
-                LT.midi() * 2,
-                LT.midi() * 2,
+                Rest * 2,
+                LT * 4,
+                LT * 2,
+                LT * 2,
             ]).midibox(),
             Seq::new(vec![
-                CH.midi() * 1,
-                CH.midi() * 1,
-                OH.midi() * 1,
-                CH.midi() * 1,
-                CH.midi() * 1,
-                OH.midi() * 1,
-                CH.midi() * 1,
-                OH.midi() * 1,
+                CH * 1,
+                CH * 1,
+                OH * 1,
+                CH * 1,
+                CH * 1,
+                OH * 1,
+                CH * 1,
+                OH * 1,
             ]).midibox(),
             Seq::new(vec![
-                SP1.midi() * 5
+                SP1 * 5
             ])
                 .split_notes(vec![true, false, false, false, true])
                 .midibox()
