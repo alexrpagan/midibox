@@ -8,6 +8,7 @@ use Tone::Rest;
 
 fn main() {
     let mut channel_id_to_port_id : HashMap<usize, usize> = HashMap::new();
+    // H 03
     let drums = vec![
         Seq::new(vec![
             BD.midi() * 8,
@@ -38,7 +39,7 @@ fn main() {
         ]),
         Seq::new(vec![
             CH.midi().set_velocity(20) * 1,
-            OH.midi().set_velocity(40) * 1,
+            OH.midi().set_velocity(30) * 1,
             CH.midi().set_velocity(10) * 1,
             CH.midi().set_velocity(5) * 1,
         ])
@@ -94,6 +95,7 @@ fn main() {
     assert_eq!(roots.total_duration(), harmony_1.total_duration());
     assert_eq!(roots.total_duration(), harmony_2.total_duration());
 
+    // Preset 490
     let synth = vec![
         roots.clone(),
         roots.clone().transpose_up(Interval::Perf5),
