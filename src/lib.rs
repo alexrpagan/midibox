@@ -37,6 +37,38 @@ pub trait Midibox {
 
 pub trait ToMidi {
     fn midi(&self) -> Midi;
+
+    fn is_rest(&self) -> bool {
+        self.midi().is_rest()
+    }
+
+    fn u8_maybe(&self) -> Option<u8> {
+        self.midi().u8_maybe()
+    }
+
+    fn set_velocity(&self, velocity: u8) -> Midi {
+        self.midi().set_velocity(velocity)
+    }
+
+    fn set_duration(&self, duration: u32) -> Midi {
+        self.midi().set_duration(duration)
+    }
+
+    fn set_pitch_u8(&self, val: Option<u8>) -> Midi {
+        self.midi().set_pitch_u8(val)
+    }
+
+    fn set_pitch(&self, tone: Tone, oct: u8) -> Midi {
+        self.midi().set_pitch(tone, oct)
+    }
+
+    fn transpose_up(&self, interval: Interval) -> Midi {
+        self.midi().transpose_up(interval)
+    }
+
+    fn transpose_down(&self, interval: Interval) -> Midi {
+        self.transpose_down(interval)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -311,6 +343,15 @@ impl Mul<u32> for Midi {
 
     fn mul(self, rhs: u32) -> Self::Output {
         self.clone().set_duration(self.duration * rhs)
+    }
+}
+
+
+impl Mul<u32> for Tone {
+    type Output = Midi;
+
+    fn mul(self, rhs: u32) -> Self::Output {
+        self.midi() * rhs
     }
 }
 

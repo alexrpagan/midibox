@@ -1,3 +1,4 @@
+use std::ops::Mul;
 use crate::{Midi, ToMidi, Tone};
 use Drumlogue::{BD, CH, CP, HT, LT, OH, RS, SD, SP1, SP2};
 
@@ -28,5 +29,15 @@ impl ToMidi for Drumlogue {
             SP1 => { Tone::E.oct(3) }
             SP2 => { Tone::F.oct(3) }
         }
+    }
+}
+
+
+impl Mul<u32> for Drumlogue {
+    type Output = Midi;
+
+    fn mul(self, rhs: u32) -> Self::Output {
+        let midi = self.midi();
+        midi.set_duration(midi.duration * rhs)
     }
 }

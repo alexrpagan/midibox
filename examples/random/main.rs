@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use midibox::{Bpm, Degree, Interval, Scale, ToMidi, Tone};
+use midibox::{Bpm, Degree, Interval, Scale, Tone};
 use midibox::drumlogue::Drumlogue::{BD, CH, CP, OH, SP1};
 use midibox::sequences::Seq;
 use midibox::rand::RandomVelocity;
@@ -13,44 +13,44 @@ fn main() {
 
     let drums = vec![
         RandomVelocity::wrap(Seq::new(vec![
-            CH.midi() * 1,
-            CH.midi() * 1,
-            OH.midi() * 1,
-            CH.midi() * 1,
-            CH.midi() * 1,
-            CH.midi() * 1,
-            CH.midi() * 1,
-            OH.midi() * 1,
+            CH * 1,
+            CH * 1,
+            OH * 1,
+            CH * 1,
+            CH * 1,
+            CH * 1,
+            CH * 1,
+            OH * 1,
         ]).midibox()),
         Seq::new(vec![
-            BD.midi() * 4,
-            BD.midi() * 4,
-            BD.midi() * 4,
-            BD.midi() * 4,
-            BD.midi() * 4,
-            BD.midi() * 4,
-            BD.midi() * 4,
-            BD.midi() * 1,
-            BD.midi() * 3,
-            BD.midi() * 4,
-            BD.midi() * 4,
-            BD.midi() * 4,
-            BD.midi() * 4,
-            BD.midi() * 4,
-            BD.midi() * 4,
-            BD.midi() * 4,
-            BD.midi() * 1,
-            BD.midi() * 2,
-            BD.midi() * 1,
+            BD * 4,
+            BD * 4,
+            BD * 4,
+            BD * 4,
+            BD * 4,
+            BD * 4,
+            BD * 4,
+            BD * 1,
+            BD * 3,
+            BD * 4,
+            BD * 4,
+            BD * 4,
+            BD * 4,
+            BD * 4,
+            BD * 4,
+            BD * 4,
+            BD * 1,
+            BD * 2,
+            BD * 1,
         ]).midibox(),
         Seq::new(vec![
-            Rest.midi() * 4,
-            CP.midi() * 4
+            Rest * 4,
+            CP * 4
         ]).midibox(),
         Seq::new(vec![
-            SP1.midi() * 1,
-            Rest.midi() * 3,
-            SP1.midi() * 1
+            SP1 * 1,
+            Rest * 3,
+            SP1 * 1
         ]).midibox()
     ];
 
