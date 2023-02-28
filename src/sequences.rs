@@ -1,17 +1,113 @@
 use std::ops::{Add, Sub};
 use crate::{Degree, Interval, Midi, Midibox, Scale, Tone};
 
+#[derive(Debug, Clone)]
+pub struct Chord {
+    notes: Vec<Midi>
+}
+
+pub trait MutMidi: Sized {
+    fn total_duration(&self) -> u32;
+    fn duration(self, duration: u32) -> Self;
+    fn velocity(self, velocity: u8) -> Self;
+    fn pitch(self, tone: Tone, oct: u8) -> Self;
+    fn scale_duration(self, factor: u32) -> Self;
+    fn transpose_up(self, interval: &Interval) -> Self;
+    fn transpose_down(self, interval: &Interval) -> Self;
+    fn harmonize_up(self, scale: &Scale, degree: &Degree) -> Self;
+    fn harmonize_down(self, scale: &Scale, degree: &Degree) -> Self;
+}
+
+impl Chord {
+    pub fn new(notes: Vec<Midi>) -> Self {
+        Chord { notes }
+    }
+
+    pub fn note(note: Midi) -> Self {
+        Chord { notes: vec![note] }
+    }
+}
+
+impl MutMidi for Chord {
+    fn total_duration(&self) -> u32 {
+        self.notes.iter().map(|n| n.duration).max().unwrap_or_else(|| 0)
+    }
+
+    fn duration(mut self, duration: u32) -> Self {
+        self.notes = self.notes.into_iter().map(|m| m.set_duration(duration)).collect();
+        self
+    }
+
+    fn velocity(mut self, velocity: u8) -> Self {
+        self.notes = self.notes.into_iter().map(|m| m.set_velocity(velocity)).collect();
+        self
+    }
+
+    fn pitch(mut self, tone: Tone, oct: u8) -> Self {
+        self.notes = self.notes.into_iter().map(|m| m.set_pitch(tone, oct)).collect();
+        self
+    }
+
+    fn scale_duration(mut self, factor: u32) -> Self {
+        self.notes = self.notes.into_iter().map(|m| m * factor).collect();
+        self
+    }
+
+    fn transpose_up(mut self, interval: &Interval) -> Self {
+        self.notes = self.notes.into_iter().map(|m| m + *interval).collect();
+        self
+    }
+
+    fn transpose_down(mut self, interval: &Interval) -> Self {
+        self.notes = self.notes.into_iter().map(|m| m - *interval).collect();
+        self
+    }
+
+    fn harmonize_up(mut self, scale: &Scale, degree: &Degree) -> Self {
+        self.notes = self.notes.into_iter()
+            .map(|m| if m.is_rest() {
+                m
+            } else {
+                scale
+                    .harmonize_up(m, *degree)
+                    .unwrap_or_else(|| m.set_pitch(Tone::Rest, 4))
+            })
+            .collect();
+        self
+    }
+
+    fn harmonize_down(mut self, scale: &Scale, degree: &Degree) -> Self {
+        self.notes = self.notes.into_iter()
+            .map(|m| if m.is_rest() {
+                m
+            } else {
+                scale
+                    .harmonize_down(m, *degree)
+                    .unwrap_or_else(|| m.set_pitch(Tone::Rest, 4))
+            })
+            .collect();
+        self
+    }
+}
+
 // A looping sequence of statically defined notes.
 #[derive(Debug, Clone)]
 pub struct Seq {
     /// The notes that can be produced by a sequence
-    notes: Vec<Midi>,
+    notes: Vec<Chord>,
     /// The index of the play head into notes
     head_position: usize,
 }
 
 impl Seq {
     pub fn new(notes: Vec<Midi>) -> Self {
+        Seq {
+            notes: notes.into_iter().map(|n| Chord::note(n)).collect(),
+            head_position: 0,
+        }
+    }
+
+    pub fn chords(notes: Vec<Chord>) -> Self {
         Seq {
             notes,
             head_position: 0,
@@ -31,7 +127,7 @@ impl Seq {
                 self.notes
                     .clone()
                     .into_iter()
-                    .map(|m| vec![m])
+                    .map(|m| m.notes.clone())
                     .cycle()
                     .skip(self.head_position)
             )
@@ -51,7 +147,7 @@ impl Seq {
     }
 
     pub fn total_duration(&self) -> u32 {
-        return self.notes.iter().map(|it| it.duration).sum()
+        return self.notes.iter().map(|it| it.total_duration()).sum()
     }
 
     pub fn fast_forward(mut self, ticks: usize) -> Self {
@@ -60,17 +156,17 @@ impl Seq {
     }
 
     pub fn duration(mut self, duration: u32) -> Self {
-        self.notes = self.notes.into_iter().map(|m| m.set_duration(duration)).collect();
+        self.notes = self.notes.into_iter().map(|c| c.duration(duration)).collect();
         self
     }
 
     pub fn velocity(mut self, velocity: u8) -> Self {
-        self.notes = self.notes.into_iter().map(|m| m.set_velocity(velocity)).collect();
+        self.notes = self.notes.into_iter().map(|c| c.velocity(velocity)).collect();
         self
     }
 
     pub fn scale_duration(mut self, factor: u32) -> Self {
-        self.notes = self.notes.into_iter().map(|m| m * factor).collect();
+        self.notes = self.notes.into_iter().map(|c| c.scale_duration(factor)).collect();
         self
     }
 
@@ -82,7 +178,13 @@ impl Seq {
     }
 
     pub fn repeat(mut self, times: usize) -> Self {
-        self.notes = self.notes.repeat(times);
+        let mut new_notes: Vec<Chord> = Vec::with_capacity(
+            self.notes.len() * times
+        );
+        for _ in 0..times {
+            new_notes.extend(self.notes.clone())
+        }
+        self.notes = new_notes;
         self
     }
 
@@ -92,47 +194,39 @@ impl Seq {
     }
 
     pub fn transpose_up(mut self, interval: Interval) -> Self {
-        self.notes = self.notes.into_iter().map(|m| m + interval).collect();
+        self.notes = self.notes.into_iter().map(|c| c.transpose_up(&interval)).collect();
         self
     }
 
     pub fn transpose_down(mut self, interval: Interval) -> Self {
-        self.notes = self.notes.into_iter().map(|m| m - interval).collect();
+        self.notes = self.notes.into_iter().map(|c| c.transpose_down(&interval)).collect();
         self
     }
 
     pub fn harmonize_up(mut self, scale: &Scale, degree: Degree) -> Self {
         self.notes = self.notes.into_iter()
-            .map(|m| if m.is_rest() {
-                m
-            } else {
-                scale
-                    .harmonize_up(m, degree)
-                    .unwrap_or_else(|| m.set_pitch(Tone::Rest, 4))
-            })
+            .map(|m| m.harmonize_up(scale, &degree))
             .collect();
         self
     }
 
     pub fn harmonize_down(mut self, scale: &Scale, degree: Degree) -> Self {
         self.notes = self.notes.into_iter()
-            .map(|m| if m.is_rest() {
-                m
-            } else {
-                scale
-                    .harmonize_down(m, degree)
-                    .unwrap_or_else(|| m.set_pitch(Tone::Rest, 4))
-            })
+            .map(|m| m.harmonize_down(scale, &degree))
             .collect();
         self
     }
 
     /// Splits each note into a series of metronome ticks adding to the note's duration
     pub fn split_to_ticks(mut self) -> Self {
-        self.notes = self.notes.into_iter().flat_map(|m| {
-            let old_duration = m.duration as usize;
-            vec![m.set_duration(1)].repeat(old_duration).into_iter()
-        }).collect::<Vec<Midi>>();
+        self.notes = self.notes.into_iter().flat_map(|c| {
+            let old_duration = c.total_duration() as usize;
+            let mut notes: Vec<Chord> = Vec::new();
+            for _ in 0..old_duration {
+                notes.push(c.clone().duration(1))
+            }
+            notes
+        }).collect::<Vec<Chord>>();
         self
     }
 
@@ -144,11 +238,11 @@ impl Seq {
     /// match the total number of notes in this sequence.
     pub fn mask(mut self, mask: &Vec<bool>) -> Self {
         self.notes = self.notes.into_iter()
-            .zip(mask.into_iter().cycle()).map(|(midi, should_play)| {
+            .zip(mask.into_iter().cycle()).map(|(c, should_play)| {
             if *should_play {
-                midi
+                c
             } else {
-                midi.set_pitch(Tone::Rest, 4)
+                c.pitch(Tone::Rest, 4)
             }
         }).collect();
         self
