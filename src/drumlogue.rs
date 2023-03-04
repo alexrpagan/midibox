@@ -1,5 +1,5 @@
 use std::ops::Mul;
-use crate::{Midi, ToMidi, Tone};
+use crate::{Chord, Midi, ToChord, ToMidi, Tone};
 use Drumlogue::{BD, CH, CP, HT, LT, OH, RS, SD, SP1, SP2};
 
 pub enum Drumlogue {
@@ -13,6 +13,12 @@ pub enum Drumlogue {
     CP,
     SP1,
     SP2,
+}
+
+impl ToChord for Drumlogue {
+    fn chord(&self) -> Chord {
+        Chord::note(self.midi())
+    }
 }
 
 impl ToMidi for Drumlogue {
@@ -31,7 +37,6 @@ impl ToMidi for Drumlogue {
         }
     }
 }
-
 
 impl Mul<u32> for Drumlogue {
     type Output = Midi;

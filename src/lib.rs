@@ -35,7 +35,11 @@ pub trait Midibox {
     fn next(&mut self) -> Option<Vec<Midi>>;
 }
 
-pub trait ToMidi {
+pub trait ToChord {
+    fn chord(&self) -> Chord;
+}
+
+pub trait ToMidi: ToChord {
     fn midi(&self) -> Midi;
 
     fn is_rest(&self) -> bool {
@@ -68,6 +72,115 @@ pub trait ToMidi {
 
     fn transpose_down(&self, interval: Interval) -> Midi {
         self.midi().transpose_down(interval)
+    }
+}
+
+
+pub trait MutMidi: Sized {
+    fn total_duration(&self) -> u32;
+    fn duration(self, duration: u32) -> Self;
+    fn velocity(self, velocity: u8) -> Self;
+    fn pitch(self, tone: Tone, oct: u8) -> Self;
+    fn scale_duration(self, factor: u32) -> Self;
+    fn transpose_up(self, interval: &Interval) -> Self;
+    fn transpose_down(self, interval: &Interval) -> Self;
+    fn harmonize_up(self, scale: &Scale, degree: &Degree) -> Self;
+    fn harmonize_down(self, scale: &Scale, degree: &Degree) -> Self;
+}
+
+#[macro_export]
+macro_rules! chord {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut temp_vec = Vec::new();
+            $(
+                temp_vec.push($x.midi());
+            )*
+            Chord::new(temp_vec)
+        }
+    };
+}
+
+#[derive(Debug, Clone)]
+pub struct Chord {
+    notes: Vec<Midi>
+}
+
+impl ToChord for Chord {
+    fn chord(&self) -> Chord {
+        self.clone()
+    }
+}
+
+impl Chord {
+    pub fn new(notes: Vec<Midi>) -> Self {
+        Chord { notes }
+    }
+
+    pub fn note(note: Midi) -> Self {
+        Chord { notes: vec![note] }
+    }
+}
+
+impl MutMidi for Chord {
+    fn total_duration(&self) -> u32 {
+        self.notes.iter().map(|n| n.duration).max().unwrap_or_else(|| 0)
+    }
+
+    fn duration(mut self, duration: u32) -> Self {
+        self.notes = self.notes.into_iter().map(|m| m.set_duration(duration)).collect();
+        self
+    }
+
+    fn velocity(mut self, velocity: u8) -> Self {
+        self.notes = self.notes.into_iter().map(|m| m.set_velocity(velocity)).collect();
+        self
+    }
+
+    fn pitch(mut self, tone: Tone, oct: u8) -> Self {
+        self.notes = self.notes.into_iter().map(|m| m.set_pitch(tone, oct)).collect();
+        self
+    }
+
+    fn scale_duration(mut self, factor: u32) -> Self {
+        self.notes = self.notes.into_iter().map(|m| m * factor).collect();
+        self
+    }
+
+    fn transpose_up(mut self, interval: &Interval) -> Self {
+        self.notes = self.notes.into_iter().map(|m| m + *interval).collect();
+        self
+    }
+
+    fn transpose_down(mut self, interval: &Interval) -> Self {
+        self.notes = self.notes.into_iter().map(|m| m - *interval).collect();
+        self
+    }
+
+    fn harmonize_up(mut self, scale: &Scale, degree: &Degree) -> Self {
+        self.notes = self.notes.into_iter()
+            .map(|m| if m.is_rest() {
+                m
+            } else {
+                scale
+                    .harmonize_up(m, *degree)
+                    .unwrap_or_else(|| m.set_pitch(Tone::Rest, 4))
+            })
+            .collect();
+        self
+    }
+
+    fn harmonize_down(mut self, scale: &Scale, degree: &Degree) -> Self {
+        self.notes = self.notes.into_iter()
+            .map(|m| if m.is_rest() {
+                m
+            } else {
+                scale
+                    .harmonize_down(m, *degree)
+                    .unwrap_or_else(|| m.set_pitch(Tone::Rest, 4))
+            })
+            .collect();
+        self
     }
 }
 
@@ -319,6 +432,50 @@ impl Midi {
     }
 }
 
+impl ToChord for Midi {
+    fn chord(&self) -> Chord {
+        Chord::note(self.midi())
+    }
+}
+
+impl ToMidi for Midi {
+    fn midi(&self) -> Midi {
+        self.clone()
+    }
+
+    fn is_rest(&self) -> bool {
+        self.is_rest()
+    }
+
+    fn u8_maybe(&self) -> Option<u8> {
+        self.u8_maybe()
+    }
+
+    fn set_velocity(&self, velocity: u8) -> Midi {
+        self.set_velocity(velocity)
+    }
+
+    fn set_duration(&self, duration: u32) -> Midi {
+        self.set_duration(duration)
+    }
+
+    fn set_pitch_u8(&self, val: Option<u8>) -> Midi {
+        self.set_pitch_u8(val)
+    }
+
+    fn set_pitch(&self, tone: Tone, oct: u8) -> Midi {
+        self.set_pitch(tone, oct)
+    }
+
+    fn transpose_up(&self, interval: Interval) -> Midi {
+        self.transpose_up(interval)
+    }
+
+    fn transpose_down(&self, interval: Interval) -> Midi {
+        self.transpose_down(interval)
+    }
+}
+
 /// Transposes MIDI note up specified interval
 impl Add<Interval> for Midi {
     type Output = Midi;
@@ -417,6 +574,12 @@ impl Tone {
 
     pub fn oct(&self, oct: u8) -> Midi {
         Midi::from_tone(*self, oct)
+    }
+}
+
+impl ToChord for Tone {
+    fn chord(&self) -> Chord {
+        Chord::note(self.midi())
     }
 }
 

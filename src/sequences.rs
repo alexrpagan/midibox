@@ -1,93 +1,17 @@
 use std::ops::{Add, Sub};
-use crate::{Degree, Interval, Midi, Midibox, Scale, Tone};
+use crate::{Chord, Degree, Interval, Midi, Midibox, MutMidi, Scale, ToMidi, Tone};
 
-#[derive(Debug, Clone)]
-pub struct Chord {
-    notes: Vec<Midi>
-}
-
-pub trait MutMidi: Sized {
-    fn total_duration(&self) -> u32;
-    fn duration(self, duration: u32) -> Self;
-    fn velocity(self, velocity: u8) -> Self;
-    fn pitch(self, tone: Tone, oct: u8) -> Self;
-    fn scale_duration(self, factor: u32) -> Self;
-    fn transpose_up(self, interval: &Interval) -> Self;
-    fn transpose_down(self, interval: &Interval) -> Self;
-    fn harmonize_up(self, scale: &Scale, degree: &Degree) -> Self;
-    fn harmonize_down(self, scale: &Scale, degree: &Degree) -> Self;
-}
-
-impl Chord {
-    pub fn new(notes: Vec<Midi>) -> Self {
-        Chord { notes }
-    }
-
-    pub fn note(note: Midi) -> Self {
-        Chord { notes: vec![note] }
-    }
-}
-
-impl MutMidi for Chord {
-    fn total_duration(&self) -> u32 {
-        self.notes.iter().map(|n| n.duration).max().unwrap_or_else(|| 0)
-    }
-
-    fn duration(mut self, duration: u32) -> Self {
-        self.notes = self.notes.into_iter().map(|m| m.set_duration(duration)).collect();
-        self
-    }
-
-    fn velocity(mut self, velocity: u8) -> Self {
-        self.notes = self.notes.into_iter().map(|m| m.set_velocity(velocity)).collect();
-        self
-    }
-
-    fn pitch(mut self, tone: Tone, oct: u8) -> Self {
-        self.notes = self.notes.into_iter().map(|m| m.set_pitch(tone, oct)).collect();
-        self
-    }
-
-    fn scale_duration(mut self, factor: u32) -> Self {
-        self.notes = self.notes.into_iter().map(|m| m * factor).collect();
-        self
-    }
-
-    fn transpose_up(mut self, interval: &Interval) -> Self {
-        self.notes = self.notes.into_iter().map(|m| m + *interval).collect();
-        self
-    }
-
-    fn transpose_down(mut self, interval: &Interval) -> Self {
-        self.notes = self.notes.into_iter().map(|m| m - *interval).collect();
-        self
-    }
-
-    fn harmonize_up(mut self, scale: &Scale, degree: &Degree) -> Self {
-        self.notes = self.notes.into_iter()
-            .map(|m| if m.is_rest() {
-                m
-            } else {
-                scale
-                    .harmonize_up(m, *degree)
-                    .unwrap_or_else(|| m.set_pitch(Tone::Rest, 4))
-            })
-            .collect();
-        self
-    }
-
-    fn harmonize_down(mut self, scale: &Scale, degree: &Degree) -> Self {
-        self.notes = self.notes.into_iter()
-            .map(|m| if m.is_rest() {
-                m
-            } else {
-                scale
-                    .harmonize_down(m, *degree)
-                    .unwrap_or_else(|| m.set_pitch(Tone::Rest, 4))
-            })
-            .collect();
-        self
-    }
+#[macro_export]
+macro_rules! seq {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut temp_vec = Vec::new();
+            $(
+                temp_vec.push($x.chord());
+            )*
+            Seq::chords(temp_vec)
+        }
+    };
 }
 
 // A looping sequence of statically defined notes.
