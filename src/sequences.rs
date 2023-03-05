@@ -1,5 +1,9 @@
 use std::ops::{Add, Sub};
-use crate::{Chord, Degree, Interval, Midi, Midibox, MutMidi, Scale, ToMidi, Tone};
+use crate::Midibox;
+use crate::chord::Chord;
+use crate::midi::{Midi, MutMidi};
+use crate::scale::{Degree, Interval, Scale};
+use crate::tone::Tone;
 
 #[macro_export]
 macro_rules! seq {

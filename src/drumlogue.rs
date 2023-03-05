@@ -1,6 +1,8 @@
 use std::ops::Mul;
-use crate::{Chord, Midi, ToChord, ToMidi, Tone};
 use Drumlogue::{BD, CH, CP, HT, LT, OH, RS, SD, SP1, SP2};
+use crate::chord::{Chord, ToChord};
+use crate::midi::{Midi, ToMidi};
+use crate::tone::Tone;
 
 pub enum Drumlogue {
     BD,

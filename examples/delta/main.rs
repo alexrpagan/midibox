@@ -1,7 +1,9 @@
-use midibox::{Bpm, Degree, Scale, Tone};
+use midibox::tone::Tone;
 use midibox::sequences::Seq;
-use midibox::Interval::Oct;
+use midibox::scale::Interval::Oct;
+use midibox::meter::Bpm;
 use midibox::player::{PlayerConfig, try_run};
+use midibox::scale::{Degree, Scale};
 
 fn main() {
     let c_maj = Scale::major(Tone::C);

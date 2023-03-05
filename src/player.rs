@@ -1,4 +1,4 @@
-use log::{info, debug, error};
+use log::{debug, error, info};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::sync::Arc;
@@ -7,7 +7,9 @@ use std::thread::sleep;
 use crossbeam::atomic::AtomicCell;
 use ctrlc;
 use midir::{MidiOutput, MidiOutputConnection};
-use crate::{Meter, Midi, Midibox, NOTE_OFF_MSG, NOTE_ON_MSG};
+use crate::Midibox;
+use crate::meter::Meter;
+use crate::midi::{Midi, NOTE_OFF_MSG, NOTE_ON_MSG};
 use crate::router::{Router, StaticRouter};
 
 #[derive(Debug, Clone, Copy)]

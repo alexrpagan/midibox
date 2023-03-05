@@ -1,12 +1,14 @@
 use std::collections::HashMap;
-use midibox::{Bpm, Scale, Tone};
+use midibox::tone::Tone;
 use midibox::drumlogue::Drumlogue::{BD, CH, CP, HT, LT, OH, RS, SD};
-use midibox::Interval::Oct;
+use midibox::scale::Interval::Oct;
+use midibox::meter::Bpm;
 use midibox::sequences::Seq;
 use midibox::player::{PlayerConfig, try_run};
 use midibox::router::MapRouter;
-use midibox::Tone::Rest;
-use midibox::ToMidi;
+use midibox::tone::Tone::Rest;
+use midibox::midi::ToMidi;
+use midibox::scale::Scale;
 
 fn main() {
     let mut channel_id_to_port_id : HashMap<usize, usize> = HashMap::new();
