@@ -7,7 +7,7 @@ use midibox::sequences::Seq;
 use midibox::player::{PlayerConfig, try_run};
 use midibox::router::MapRouter;
 use midibox::scale::Interval;
-use midibox::midi::Tone::Rest;
+use midibox::tone::Tone::Rest;
 
 fn main() {
     let mut channel_id_to_port_id : HashMap<usize, usize> = HashMap::new();

@@ -12,13 +12,6 @@ use crate::meter::Meter;
 use crate::midi::{Midi, NOTE_OFF_MSG, NOTE_ON_MSG};
 use crate::router::{Router, StaticRouter};
 
-#[derive(Debug, Clone, Copy)]
-pub struct PlayingNote {
-    pub channel_id: usize,
-    pub start_tick_id: u64,
-    pub note: Midi,
-}
-
 
 pub struct Player {
     /// Describes the time spent playing in ticks.
@@ -28,6 +21,13 @@ pub struct Player {
     /// A map from a sounding note's ID to the note, decorated with metadata about how the note was
     /// generated.
     playing_notes: HashMap<u64, PlayingNote>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct PlayingNote {
+    pub channel_id: usize,
+    pub start_tick_id: u64,
+    pub note: Midi,
 }
 
 impl Player {

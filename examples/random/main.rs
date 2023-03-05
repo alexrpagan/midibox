@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use midibox::tone::Tone;
 use midibox::drumlogue::Drumlogue::{BD, CH, CP, OH, SP1};
 use midibox::meter::Bpm;
 use midibox::sequences::Seq;
@@ -7,7 +6,8 @@ use midibox::rand::RandomVelocity;
 use midibox::player::{PlayerConfig, try_run};
 use midibox::router::MapRouter;
 use midibox::scale::{Degree, Interval, Scale};
-use midibox::midi::Tone::Rest;
+use midibox::tone::Tone::Rest;
+use midibox::tone::Tone;
 
 
 fn main() {
