@@ -3,54 +3,6 @@ use crate::chord::{Chord, ToChord};
 use crate::scale::{Degree, Interval, Scale};
 use crate::tone::Tone;
 
-pub trait ToMidi: ToChord {
-    fn midi(&self) -> Midi;
-
-    fn is_rest(&self) -> bool {
-        self.midi().is_rest()
-    }
-
-    fn u8_maybe(&self) -> Option<u8> {
-        self.midi().u8_maybe()
-    }
-
-    fn set_velocity(&self, velocity: u8) -> Midi {
-        self.midi().set_velocity(velocity)
-    }
-
-    fn set_duration(&self, duration: u32) -> Midi {
-        self.midi().set_duration(duration)
-    }
-
-    fn set_pitch_u8(&self, val: Option<u8>) -> Midi {
-        self.midi().set_pitch_u8(val)
-    }
-
-    fn set_pitch(&self, tone: Tone, oct: u8) -> Midi {
-        self.midi().set_pitch(tone, oct)
-    }
-
-    fn transpose_up(&self, interval: Interval) -> Midi {
-        self.midi().transpose_up(interval)
-    }
-
-    fn transpose_down(&self, interval: Interval) -> Midi {
-        self.midi().transpose_down(interval)
-    }
-}
-
-
-pub trait MutMidi: Sized {
-    fn total_duration(&self) -> u32;
-    fn duration(self, duration: u32) -> Self;
-    fn velocity(self, velocity: u8) -> Self;
-    fn pitch(self, tone: Tone, oct: u8) -> Self;
-    fn scale_duration(self, factor: u32) -> Self;
-    fn transpose_up(self, interval: &Interval) -> Self;
-    fn transpose_down(self, interval: &Interval) -> Self;
-    fn harmonize_up(self, scale: &Scale, degree: &Degree) -> Self;
-    fn harmonize_down(self, scale: &Scale, degree: &Degree) -> Self;
-}
 const DEFAULT_OCT: u8 = 4;
 const DEFAULT_VELOCITY: u8 = 100;
 const DEFAULT_DURATION: u32 = 1;
@@ -158,6 +110,54 @@ impl Mul<u32> for Midi {
     }
 }
 
+pub trait MutMidi: Sized {
+    fn total_duration(&self) -> u32;
+    fn duration(self, duration: u32) -> Self;
+    fn velocity(self, velocity: u8) -> Self;
+    fn pitch(self, tone: Tone, oct: u8) -> Self;
+    fn scale_duration(self, factor: u32) -> Self;
+    fn transpose_up(self, interval: &Interval) -> Self;
+    fn transpose_down(self, interval: &Interval) -> Self;
+    fn harmonize_up(self, scale: &Scale, degree: &Degree) -> Self;
+    fn harmonize_down(self, scale: &Scale, degree: &Degree) -> Self;
+}
+
+pub trait ToMidi: ToChord {
+    fn midi(&self) -> Midi;
+
+    fn is_rest(&self) -> bool {
+        self.midi().is_rest()
+    }
+
+    fn u8_maybe(&self) -> Option<u8> {
+        self.midi().u8_maybe()
+    }
+
+    fn set_velocity(&self, velocity: u8) -> Midi {
+        self.midi().set_velocity(velocity)
+    }
+
+    fn set_duration(&self, duration: u32) -> Midi {
+        self.midi().set_duration(duration)
+    }
+
+    fn set_pitch_u8(&self, val: Option<u8>) -> Midi {
+        self.midi().set_pitch_u8(val)
+    }
+
+    fn set_pitch(&self, tone: Tone, oct: u8) -> Midi {
+        self.midi().set_pitch(tone, oct)
+    }
+
+    fn transpose_up(&self, interval: Interval) -> Midi {
+        self.midi().transpose_up(interval)
+    }
+
+    fn transpose_down(&self, interval: Interval) -> Midi {
+        self.midi().transpose_down(interval)
+    }
+}
+
 impl ToMidi for Midi {
     fn midi(&self) -> Midi {
         self.clone()
@@ -204,7 +204,6 @@ impl ToChord for Midi {
 
 #[cfg(test)]
 mod tests {
-    use crate::midi::{Midi, Tone};
     use crate::scale::{Degree, Scale};
     use crate::tone::Tone;
 
