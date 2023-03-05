@@ -1,6 +1,8 @@
-use midibox::{Bpm, Degree, Interval, Scale, Tone};
+use midibox::tone::Tone;
+use midibox::meter::Bpm;
 use midibox::sequences::Seq;
 use midibox::player::{PlayerConfig, try_run};
+use midibox::scale::{Degree, Interval, Scale};
 
 fn main() {
     let scale = Scale::major(Tone::Gb);

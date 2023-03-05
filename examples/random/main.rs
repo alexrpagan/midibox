@@ -1,11 +1,13 @@
 use std::collections::HashMap;
-use midibox::{Bpm, Degree, Interval, Scale, Tone};
+use midibox::tone::Tone;
 use midibox::drumlogue::Drumlogue::{BD, CH, CP, OH, SP1};
+use midibox::meter::Bpm;
 use midibox::sequences::Seq;
 use midibox::rand::RandomVelocity;
 use midibox::player::{PlayerConfig, try_run};
 use midibox::router::MapRouter;
-use midibox::Tone::Rest;
+use midibox::scale::{Degree, Interval, Scale};
+use midibox::midi::Tone::Rest;
 
 
 fn main() {

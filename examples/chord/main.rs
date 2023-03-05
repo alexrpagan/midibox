@@ -1,23 +1,29 @@
 use std::collections::HashMap;
-use midibox::{Bpm, Chord, MutMidi, Scale, seq, chord, ToMidi, ToChord, Tone};
-use midibox::drumlogue::Drumlogue::{BD, CH, HT, LT, OH};
+use midibox::{chord, seq};
+use midibox::chord::{Chord, ToChord};
+use midibox::drumlogue::Drumlogue::{BD, CH, HT, LT, OH, SP1};
+use midibox::meter::Bpm;
+use midibox::midi::{MutMidi, ToMidi};
 use midibox::sequences::Seq;
 use midibox::player::{PlayerConfig, try_run};
 use midibox::router::MapRouter;
-use midibox::Tone::Rest;
+use midibox::scale::Scale;
+use midibox::tone::Tone;
+use midibox::tone::Tone::Rest;
 
 fn main() {
     let _scale = Scale::major(Tone::C);
 
     let mut channel_id_to_port_id : HashMap<usize, usize> = HashMap::new();
     channel_id_to_port_id.insert(0, 1);
-    channel_id_to_port_id.insert(1, 0);
+    channel_id_to_port_id.insert(1, 1);
     channel_id_to_port_id.insert(2, 0);
+    channel_id_to_port_id.insert(3, 0);
 
     let drums = seq![
        BD,
        CH,
-       Rest,
+       Tone::Rest,
        BD,
        OH,
        Rest,
@@ -31,6 +37,11 @@ fn main() {
        BD,
        Rest,
        HT
+    ].midibox();
+
+    let hats = seq![
+        Rest * 2,
+        SP1 * 2
     ].midibox();
 
     // preset 204
@@ -74,6 +85,6 @@ fn main() {
     try_run(
         PlayerConfig::from_router(Box::new(MapRouter::new(channel_id_to_port_id))),
         &Bpm::new(500),
-        &mut vec![drums, chords, roots]
+        &mut vec![drums, hats, chords, roots]
     ).unwrap()
 }

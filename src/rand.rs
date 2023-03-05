@@ -1,5 +1,6 @@
-use crate::{Midi, Midibox};
+use crate::Midibox;
 use rand::Rng;
+use crate::midi::Midi;
 
 pub struct RandomVelocity {
     factor: f64,
