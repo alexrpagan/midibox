@@ -171,13 +171,6 @@ impl Router for PlayerConfig {
     }
 }
 
-pub fn run(bpm: &dyn Meter, channels: &mut Vec<Box<dyn Midibox>>) {
-    match try_run(PlayerConfig::empty(), bpm, channels) {
-        Ok(_) => (),
-        Err(err) => println!("Error: {}", err)
-    }
-}
-
 pub fn try_run(
     player_config: PlayerConfig,
     bpm: &dyn Meter,
