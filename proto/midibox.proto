@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package midibox;
+
+service MidiboxPlayer {
+  // what is currently playing
+  // current midi connections (in/out)
+  // tempo
+  rpc GetStatus (GetStatusRequest) returns (GetStatusResponse);
+
+  // plays the midibox
+  rpc Play (PlayRequest) returns (PlayResponse);
+
+  // stops the midibox
+  rpc Stop (StopRequest) returns (StopResponse);
+}
+
+message GetStatusRequest {}
+message GetStatusResponse {
+  repeated string playing = 1;
+}
+
+message PlayRequest {
+  string name = 1;
+}
+message PlayResponse {}
+
+message StopRequest {
+  string name = 1;
+}
+message StopResponse {}
+
+message MidiboxSpec {
+  repeated MidiboxChord chords = 1;
+  uint32 head_position = 2;
+}
+
+message MidiboxChord {
+  repeated MidiboxMidi notes = 1;
+}
+
+message MidiboxMidi {
+  MidiboxTone tone = 1;
+  uint32 oct = 2;
+  uint32 velocity = 3;
+  uint32 duration = 4;
+}
+
+enum MidiboxTone {
+    Rest = 0;
+    C = 1;
+    Db = 2;
+    D = 3;
+    Eb = 4;
+    E = 5;
+    F = 6;
+    Gb = 7;
+    G = 8;
+    Ab = 9;
+    A = 10;
+    Bb = 11;
+    B = 12;
+}
