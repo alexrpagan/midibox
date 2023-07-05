@@ -1,7 +1,7 @@
 use log::{debug, error, info};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 
 use crossbeam::atomic::AtomicCell;
@@ -176,9 +176,26 @@ pub fn try_run(
     bpm: &dyn Meter,
     channels: &mut Vec<Box<dyn Midibox>>
 ) -> Result<(), Box<dyn Error>> {
-    env_logger::init();
+    let name = "Midibox";
+    let mut map : HashMap<String, bool> = HashMap::new();
+    map.insert(name.to_string(), true);
+    let running = Arc::new(Mutex::new(map));
+    // Set up listener for ctrl-C command
+    let ctrlc_running = Arc::clone(&running);
+    ctrlc::set_handler(move || {
+        ctrlc_running.lock().unwrap().insert(name.to_string(), false);
+    })?;
 
-    // TODO: factor out MIDI connection logic into separate module with YAML config
+    return try_run_ext(name, player_config, bpm, channels, &running);
+}
+
+pub fn try_run_ext(
+    name: &str,
+    player_config: PlayerConfig,
+    bpm: &dyn Meter,
+    channels: &mut Vec<Box<dyn Midibox>>,
+    running: &Arc<Mutex<HashMap<String, bool>>>
+) -> Result<(), Box<dyn Error>> {
     let midi_out = MidiOutput::new("Midi Outputs")?;
     let out_ports = midi_out.ports();
 
@@ -201,16 +218,10 @@ pub fn try_run(
         }
     }
 
-    let running = Arc::new(AtomicCell::new(true));
-
-    // Set up listener for ctrl-C command
-    let ctrlc_running = Arc::clone(&running);
-    ctrlc::set_handler(move || ctrlc_running.store(false))?;
-
     let mut player = Player::new();
 
     info!("Player Starting.");
-    while running.load() {
+    while *running.lock().unwrap().get(name).unwrap() {
         debug!("Time: {}", player.time());
         for note in player.poll_channels(channels) {
             route_note(&player_config, &mut port_id_to_conn, &note, NOTE_ON_MSG)
