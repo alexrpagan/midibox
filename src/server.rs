@@ -63,7 +63,11 @@ impl MidiboxPlayer for Impl {
     ) -> Result<Response<GetStatusResponse>, Status> {
         let reply = GetStatusResponse {
             playing: self.running.lock().unwrap()
-                .keys().into_iter().map(|x| x.to_string()).collect()
+                .iter()
+                .enumerate()
+                .filter(|i| *i.1.1)
+                .map(|i| i.1.0.to_string())
+                .collect()
         };
         Ok(Response::new(reply))
     }

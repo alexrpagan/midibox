@@ -33,6 +33,7 @@ message StopResponse {}
 message MidiboxSpec {
   repeated MidiboxChord chords = 1;
   uint32 head_position = 2;
+  uint32 channel_id = 3;
 }
 
 message MidiboxChord {
