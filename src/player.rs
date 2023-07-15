@@ -4,7 +4,6 @@ use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 
-use crossbeam::atomic::AtomicCell;
 use ctrlc;
 use midir::{MidiOutput, MidiOutputConnection};
 use crate::Midibox;

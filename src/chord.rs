@@ -17,7 +17,7 @@ macro_rules! chord {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Chord {
     pub notes: Vec<Midi>
 }

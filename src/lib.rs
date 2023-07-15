@@ -4,6 +4,7 @@ pub mod sequences;
 pub mod router;
 pub mod drumlogue;
 pub mod rand;
+pub mod arp;
 pub mod midi;
 pub mod player;
 pub mod chord;
