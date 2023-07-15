@@ -49,6 +49,10 @@ impl Seq {
         }
     }
 
+    pub fn get_chords(&self) -> &Vec<Chord> {
+        return &self.notes;
+    }
+
     pub fn render(&self) -> IterSeq {
         IterSeq {
             iter: Box::new(
