@@ -1,3 +1,4 @@
+use log::warn;
 use midibox::arp::Arpeggio;
 
 use midibox::{chord, seq};
@@ -6,6 +7,7 @@ use midibox::meter::Bpm;
 use midibox::midi::{MutMidi, ToMidi};
 use midibox::sequences::Seq;
 use midibox::player::{PlayerConfig, try_run};
+use midibox::scale::Interval::Oct;
 use midibox::tone::Tone;
 
 
@@ -40,7 +42,7 @@ fn main() {
         PlayerConfig::for_port(2),
         &Bpm::new(2000),
         &mut vec![
-            Arpeggio::ascend(s1, 4)
+            Arpeggio::ascend(s1.clone() - Oct, 10)
         ]
     ).unwrap()
 }
