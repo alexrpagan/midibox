@@ -5,6 +5,8 @@ use midibox::player::{PlayerConfig, try_run};
 use midibox::scale::{Degree, Interval, Scale};
 
 fn main() {
+    env_logger::init();
+
     let scale = Scale::major(Tone::Gb);
 
     let s1 = Seq::new(vec![

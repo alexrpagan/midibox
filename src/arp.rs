@@ -54,6 +54,23 @@ impl SelectMidi for Descend {
     }
 }
 
+pub struct CustomOrder {
+    note_order: Vec<usize>,
+    note_duration: u32
+}
+
+impl SelectMidi for CustomOrder {
+    fn select(&self, chord: &Chord, iterations_at_position: usize) -> Vec<Midi> {
+        let to_play: Option<&Midi> = self.note_order.get(
+            iterations_at_position % self.note_order.len()
+        ).and_then(|position| chord.notes.get(*position));
+
+        return to_play
+            .map(|n| vec![n.set_duration(self.note_duration)])
+            .unwrap_or(vec![]);
+    }
+}
+
 
 impl Arpeggio {
     pub fn wrap(seq: Seq, pattern: Pattern) -> Box<dyn Midibox> {
@@ -76,6 +93,12 @@ impl Arpeggio {
     pub fn descend(seq: Seq, note_duration: u32) -> Box<dyn Midibox> {
         Arpeggio::wrap(seq, Pattern {
             mask: vec![Box::new(Descend { note_duration })]
+        })
+    }
+
+    pub fn custom_order(seq: Seq, note_duration: u32, note_order: Vec<usize>) -> Box<dyn Midibox> {
+        Arpeggio::wrap(seq, Pattern {
+            mask: vec![Box::new(CustomOrder { note_order, note_duration })]
         })
     }
 }
