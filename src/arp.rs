@@ -41,6 +41,21 @@ impl SelectMidi for Ascend {
     }
 }
 
+pub struct Descend {
+    note_duration: u32,
+}
+
+impl SelectMidi for Descend {
+    fn select(&self, chord: &Chord, ticks: usize) -> Vec<Midi> {
+        let selected = chord.notes.get((chord.notes.len() - 1) - ticks % chord.notes.len());
+        return match selected {
+            None => vec![],
+            Some(note) => vec![note.set_duration(self.note_duration)]
+        };
+    }
+}
+
+
 impl Arpeggio {
     pub fn wrap(seq: Seq, pattern: Pattern) -> Box<dyn Midibox> {
         Box::new(Arpeggio {
@@ -56,6 +71,12 @@ impl Arpeggio {
     pub fn ascend(seq: Seq, note_duration: u32) -> Box<dyn Midibox> {
         Arpeggio::wrap(seq, Pattern {
             mask: vec![Box::new(Ascend { note_duration })]
+        })
+    }
+
+    pub fn descend(seq: Seq, note_duration: u32) -> Box<dyn Midibox> {
+        Arpeggio::wrap(seq, Pattern {
+            mask: vec![Box::new(Descend { note_duration })]
         })
     }
 }
