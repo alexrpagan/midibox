@@ -22,7 +22,6 @@ pub struct Pattern {
     mask: Vec<Box<dyn SelectMidi>>
 }
 
-// given
 trait SelectMidi {
     fn select(&self, chord: &Chord, iterations_at_position: usize) -> Vec<Midi>;
 }
