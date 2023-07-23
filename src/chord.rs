@@ -30,6 +30,12 @@ impl Chord {
     pub fn note(note: Midi) -> Self {
         Chord { notes: vec![note] }
     }
+
+    pub fn rotate_left(&self, mid: usize) -> Chord {
+        let mut new_notes = self.notes.clone();
+        new_notes.rotate_left(mid);
+        Chord { notes: new_notes }
+    }
 }
 
 pub trait ToChord {
@@ -41,8 +47,6 @@ impl ToChord for Chord {
         self.clone()
     }
 }
-
-
 
 
 impl MutMidi for Chord {
