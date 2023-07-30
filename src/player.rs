@@ -40,7 +40,7 @@ impl Player {
 
     /// Increment and return the tick_id, after sleeping for the required duration.
     /// Meter describes the tempo that the player should use during playback.
-    pub fn do_tick(&mut self, meter: &dyn Meter) -> u64 {
+    pub fn do_tick(&mut self, meter: &mut dyn Meter) -> u64 {
         self.tick_id += 1;
         sleep(meter.tick_duration());
         self.tick_id
@@ -172,7 +172,7 @@ impl Router for PlayerConfig {
 
 pub fn try_run(
     player_config: PlayerConfig,
-    bpm: &dyn Meter,
+    bpm: &mut dyn Meter,
     channels: &mut Vec<Box<dyn Midibox>>
 ) -> Result<(), Box<dyn Error>> {
     let name = "Midibox";
@@ -191,7 +191,7 @@ pub fn try_run(
 pub fn try_run_ext(
     name: &str,
     player_config: PlayerConfig,
-    bpm: &dyn Meter,
+    bpm: &mut dyn Meter,
     channels: &mut Vec<Box<dyn Midibox>>,
     running: &Arc<Mutex<HashMap<String, bool>>>
 ) -> Result<(), Box<dyn Error>> {

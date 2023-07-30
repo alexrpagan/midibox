@@ -29,7 +29,7 @@ fn main() {
 
     try_run(
         PlayerConfig::for_port(0),
-        &Bpm::new(300), &mut vec![
+        &mut Bpm::new(300), &mut vec![
             s1.clone()
                 .velocity(70)
                 .transpose_down(Oct)

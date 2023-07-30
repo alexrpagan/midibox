@@ -119,7 +119,7 @@ fn main() {
 
     try_run(
         PlayerConfig::from_router(Box::new(MapRouter::new(channel_to_port))),
-        &Bpm::new(300),
+        &mut Bpm::new(300),
         &mut vec![
             Dropout::wrap(bass(chord![
             Tone::E.oct(2),
