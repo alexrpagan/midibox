@@ -57,7 +57,7 @@ fn main() {
 
     try_run(
         PlayerConfig::for_port(0),
-        &Bpm::new(800),
+        &mut Bpm::new(800),
         &mut vec![
             random_velocity(Arpeggio::ascend(
                 texture_seq.clone().velocity(30),

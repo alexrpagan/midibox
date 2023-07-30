@@ -84,7 +84,7 @@ fn main() {
 
     try_run(
         PlayerConfig::from_router(Box::new(MapRouter::new(channel_id_to_port_id))),
-        &Bpm::new(500),
+        &mut Bpm::new(500),
         &mut vec![drums, hats, chords, roots]
     ).unwrap()
 }
