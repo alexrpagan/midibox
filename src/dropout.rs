@@ -1,8 +1,19 @@
-use crate::Midibox;
+use crate::{Map, Midibox};
 use rand::Rng;
 use crate::chord::Chord;
 use crate::midi::{Midi, MutMidi};
 use crate::tone::Tone;
+
+
+pub fn random_dropout(midibox: Box<dyn Midibox>, p: f64) -> Box<dyn Midibox> {
+    Map::wrap(midibox, move |m| {
+        if rand::thread_rng().gen_bool(p) {
+            m.set_pitch(Tone::Rest, 3)
+        } else {
+            m
+        }
+    })
+}
 
 pub struct Dropout {
     duration: u32,
