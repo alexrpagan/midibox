@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use midibox::drumlogue::Drumlogue::{BD, CH, CP, OH, SP1};
 use midibox::meter::Bpm;
 use midibox::sequences::Seq;
-use midibox::rand::RandomVelocity;
+use midibox::rand::{random_velocity};
 use midibox::player::{PlayerConfig, try_run};
 use midibox::router::MapRouter;
 use midibox::scale::{Degree, Interval, Scale};
@@ -14,7 +14,7 @@ fn main() {
     let mut channel_id_to_port_id : HashMap<usize, usize> = HashMap::new();
 
     let drums = vec![
-        RandomVelocity::wrap(Seq::new(vec![
+        random_velocity(Seq::new(vec![
             CH * 1,
             CH * 1,
             OH * 1,
@@ -78,7 +78,7 @@ fn main() {
             .split_notes(&vec![true, false, true]),
         roots.clone().harmonize_up(&scale, Degree::Seventh)
             .split_notes(&vec![false, false, false, true]),
-    ].into_iter().map(|seq| RandomVelocity::wrap(seq.midibox())).collect();
+    ].into_iter().map(|seq| random_velocity(seq.midibox())).collect();
 
     for i in 0..drums.len() {
         channel_id_to_port_id.insert(i, 1);

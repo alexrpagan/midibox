@@ -1,5 +1,6 @@
 use midi::{Midi};
 use crate::dropout::Dropout;
+use crate::scale::Interval::Perf5;
 
 pub mod sequences;
 pub mod router;
@@ -27,10 +28,7 @@ pub struct Map<T>
 
 impl<F: Fn(Midi) -> Midi + 'static> Map<F> {
     pub fn wrap(midibox: Box<dyn Midibox>, mapper: F) -> Box<dyn Midibox> {
-        Box::new(Map {
-            mapper,
-            midibox
-        })
+        Box::new(Map { mapper, midibox })
     }
 }
 

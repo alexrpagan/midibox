@@ -14,7 +14,7 @@ use midibox::drumlogue::Drumlogue;
 use midibox::drumlogue::Drumlogue::{*};
 use midibox::midi::MutMidi;
 use midibox::midi::ToMidi;
-use midibox::rand::RandomVelocity;
+use midibox::rand::{random_velocity};
 use midibox::router::MapRouter;
 use midibox::scale::Degree::{Fifth, Unison};
 use midibox::scale::Direction::{Up, UpShiftOct};
@@ -34,7 +34,7 @@ fn main() {
 
     try_run(
         PlayerConfig::from_router(Box::new(MapRouter::new(channel_to_port))),
-        &Bpm::new(210),
+        &Bpm::new(175),
         &mut vec![
             drum_midibox(),
             bass_midibox(),
@@ -139,7 +139,7 @@ fn phase_with_arp(arp_up: bool, note_duration: u32, inv: bool) -> Box<dyn Midibo
         (primary_phase(Scale::major(C), 3, inv) +
         primary_phase(Scale::major(D), 3, inv)).duration(64).velocity(50);
 
-    RandomVelocity::wrap(if arp_up {
+    random_velocity(if arp_up {
         Arpeggio::ascend(seq, note_duration)
     } else {
         Arpeggio::descend(seq, note_duration)

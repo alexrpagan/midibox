@@ -8,7 +8,7 @@ use midibox::meter::Bpm;
 use midibox::midi::{MutMidi, ToMidi};
 use midibox::sequences::Seq;
 use midibox::player::{PlayerConfig, try_run};
-use midibox::rand::RandomVelocity;
+use midibox::rand::{random_velocity};
 use midibox::router::MapRouter;
 use midibox::scale::Interval::Oct;
 use midibox::scale::{Degree, Interval, Scale};
@@ -59,19 +59,19 @@ fn main() {
         PlayerConfig::for_port(0),
         &Bpm::new(800),
         &mut vec![
-            RandomVelocity::wrap(Arpeggio::ascend(
+            random_velocity(Arpeggio::ascend(
                 texture_seq.clone().velocity(30),
                 4,
             )),
-            RandomVelocity::wrap(Arpeggio::descend(
+            random_velocity(Arpeggio::descend(
                 texture_seq.clone().velocity(40),
                 12
             )),
-            RandomVelocity::wrap(Arpeggio::ascend(
+            random_velocity(Arpeggio::ascend(
                 texture_seq.clone().velocity(30) + Oct,
                 20
             )),
-            RandomVelocity::wrap(Arpeggio::ascend(
+            random_velocity(Arpeggio::ascend(
                 texture_seq.clone().velocity(30) + Oct + Oct,
                 20
             )),

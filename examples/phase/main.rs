@@ -11,7 +11,7 @@ use midibox::meter::Bpm;
 use midibox::midi::{MutMidi, ToMidi};
 use midibox::sequences::Seq;
 use midibox::player::{PlayerConfig, try_run};
-use midibox::rand::RandomVelocity;
+use midibox::rand::{random_velocity};
 use midibox::router::MapRouter;
 use midibox::scale::Interval::Oct;
 use midibox::scale::{Degree, Interval, Scale};
@@ -68,7 +68,7 @@ fn get_voice(
             chord.clone()
         ].velocity(velocity).duration(140); // least common multiple of 4,5,6,7 is 420 so divide by 3
 
-    let with_arp =  RandomVelocity::wrap(
+    let with_arp =  random_velocity(
         match ascend {
             true => Arpeggio::ascend(seq, note_duration),
             false => Arpeggio::descend(seq, note_duration)
