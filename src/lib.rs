@@ -16,30 +16,29 @@ pub mod tone;
 
 pub trait Midibox {
     fn next(&mut self) -> Option<Vec<Midi>>;
-    fn name(&self) -> Option<&str> {
-        None
-    }
 }
 
-pub struct NamedMidibox {
-    name: String,
-    delegate: Box<dyn Midibox>
+pub struct Map<T>
+    where T: Fn(Midi) -> Midi
+{
+    mapper: T,
+    midibox: Box<dyn Midibox>,
 }
 
-impl NamedMidibox {
-    fn wrap(name: &str, delegate: Box<dyn Midibox>) -> Box<dyn Midibox>{
-        return Box::new(NamedMidibox {
-          name: name.to_string(), delegate
+impl<F: Fn(Midi) -> Midi + 'static> Map<F> {
+    pub fn wrap(midibox: Box<dyn Midibox>, mapper: F) -> Box<dyn Midibox> {
+        Box::new(Map {
+            mapper,
+            midibox
         })
     }
 }
 
-impl Midibox for NamedMidibox {
+impl <F: Fn(Midi) -> Midi> Midibox for Map<F> {
     fn next(&mut self) -> Option<Vec<Midi>> {
-        return self.delegate.next();
-    }
-
-    fn name(&self) -> Option<&str> {
-        Some(&self.name)
+        self.midibox.next()
+            .map(|it|
+                it.into_iter().map(|note| (self.mapper)(note)).collect::<Vec<Midi>>()
+            )
     }
 }

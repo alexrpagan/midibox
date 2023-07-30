@@ -1,13 +1,15 @@
 use std::collections::HashMap;
+use rand::Rng;
 use tonic::transport::server::Router;
 use midibox::tone::Tone::{*};
 use midibox::meter::Bpm;
 use midibox::sequences::Seq;
 use midibox::player::{PlayerConfig, try_run};
 use midibox::scale::{Degree, Interval, Scale};
-use midibox::{chord, Midibox, seq};
+use midibox::{chord, Map, Midibox, seq};
 use midibox::arp::Arpeggio;
 use midibox::chord::ToChord;
+use midibox::dropout::random_dropout;
 use midibox::drumlogue::Drumlogue;
 use midibox::drumlogue::Drumlogue::{*};
 use midibox::midi::MutMidi;
@@ -32,12 +34,12 @@ fn main() {
 
     try_run(
         PlayerConfig::from_router(Box::new(MapRouter::new(channel_to_port))),
-        &Bpm::new(175),
+        &Bpm::new(210),
         &mut vec![
             drum_midibox(),
             bass_midibox(),
-            phase_with_arp(true, 5, false),
-            phase_with_arp(false, 4, true),
+            random_dropout(phase_with_arp(true, 5, false), 0.05),
+            random_dropout(phase_with_arp(false, 4, true), 0.1),
         ]
     ).unwrap()
 }
@@ -82,23 +84,54 @@ fn bass_midibox() -> Box<dyn Midibox> {
 }
 
 fn drum_midibox() -> Box<dyn Midibox> {
-    seq![
+    Map::wrap(
+        seq![
         BD,
-        SP1.set_velocity(50),
-        SP1.set_velocity(75),
-        BD,
-        OH.set_velocity(15),
-        BD,
-        SP1.set_velocity(43),
         SP1,
-        RS.set_velocity(25),
+        SP1,
         BD,
-        SP1.set_velocity(65),
-        SP1.set_velocity(56),
+        OH,
         BD,
-        OH.set_velocity(30),
+        SP1,
+        SP1,
+        RS,
+        BD,
+        SP1,
+        SP1,
+        BD,
+        OH,
+        BD,
+        BD,
+        SP1,
+        SP1,
+        SP1,
+        SP1,
+        BD,
+        SP1,
+        SP1,
+        BD,
+        RS,
+        SP1,
+        SP1,
+        SP1,
+        OH,
         BD
-    ].midibox()
+    ].midibox(),
+        |m| {
+            let mut rng = rand::thread_rng();
+            if m.tone == BD.midi().tone {
+                m.set_velocity(rng.gen_range(75..80))
+            } else if m.tone == SP1.midi().tone {
+                m.set_velocity(rng.gen_range(50..80))
+            } else if m.tone == OH.midi().tone {
+                m.set_velocity(rng.gen_range(20..40))
+            } else if m.tone == RS.midi().tone {
+                m.set_velocity(rng.gen_range(20..40))
+            } else {
+                m
+            }
+        }
+    )
 }
 
 fn phase_with_arp(arp_up: bool, note_duration: u32, inv: bool) -> Box<dyn Midibox> {
