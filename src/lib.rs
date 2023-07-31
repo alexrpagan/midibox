@@ -1,6 +1,7 @@
 use midi::{Midi};
 use crate::chord::Chord;
 use crate::dropout::Dropout;
+use crate::map::{Map, MapChord};
 use crate::scale::Interval::Perf5;
 
 pub mod sequences;
@@ -13,6 +14,7 @@ pub mod midi;
 pub mod player;
 pub mod chord;
 pub mod meter;
+pub mod map;
 pub mod scale;
 pub mod tone;
 
@@ -20,47 +22,17 @@ pub trait Midibox {
     fn next(&mut self) -> Option<Vec<Midi>>;
 }
 
-pub struct Map<T>
-    where T: Fn(Midi) -> Midi
+
+// Common utility functions:
+
+pub fn map_notes<F>(around: Box<dyn Midibox>, f: F) -> Box<dyn Midibox>
+    where F: Fn(Midi) -> Midi + 'static
 {
-    mapper: T,
-    midibox: Box<dyn Midibox>,
+    Map::wrap(around, f)
 }
 
-impl<F: Fn(Midi) -> Midi + 'static> Map<F> {
-    pub fn wrap(midibox: Box<dyn Midibox>, mapper: F) -> Box<dyn Midibox> {
-        Box::new(Map { mapper, midibox })
-    }
-}
-
-impl <F: Fn(Midi) -> Midi> Midibox for Map<F> {
-    fn next(&mut self) -> Option<Vec<Midi>> {
-        self.midibox.next()
-            .map(|it|
-                it.into_iter().map(|note| (self.mapper)(note)).collect::<Vec<Midi>>()
-            )
-    }
-}
-
-pub struct MapChord<T>
-    where T: Fn(Chord) -> Chord
+pub fn map_chords<F>(around: Box<dyn Midibox>, f: F) -> Box<dyn Midibox>
+    where F: Fn(Chord) -> Chord + 'static
 {
-    mapper: T,
-    midibox: Box<dyn Midibox>,
-}
-
-impl<F: Fn(Chord) -> Chord + 'static> MapChord<F> {
-    pub fn wrap(midibox: Box<dyn Midibox>, mapper: F) -> Box<dyn Midibox> {
-        Box::new(MapChord { mapper, midibox })
-    }
-}
-
-impl <F: Fn(Chord) -> Chord> Midibox for MapChord<F> {
-    fn next(&mut self) -> Option<Vec<Midi>> {
-        self.midibox.next()
-            .map(|it| {
-                let result = (self.mapper)(Chord::new(it));
-                result.notes
-            })
-    }
+    MapChord::wrap(around, f)
 }
