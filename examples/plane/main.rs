@@ -34,7 +34,7 @@ fn main() {
 
     try_run(
         PlayerConfig::from_router(Box::new(MapRouter::new(channel_to_port))),
-        &mut Oscillate::new(175, 275, 0.05),
+        &mut Oscillate::new(175, 275, 0.25),
         &mut vec![
             random_dropout(drum_midibox(), 0.05),
             random_dropout(bass_midibox(), 0.2),
