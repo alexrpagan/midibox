@@ -6,7 +6,7 @@ use midibox::meter::Bpm;
 use midibox::sequences::Seq;
 use midibox::player::{PlayerConfig, try_run};
 use midibox::scale::{Degree, Direction, Interval, Scale};
-use midibox::{Map, MapChord, Midibox, seq};
+use midibox::{map_chords, map_notes, Midibox, seq};
 use midibox::chord::{Chord, ToChord};
 use midibox::dropout::random_dropout;
 use midibox::drumlogue::Drumlogue;
@@ -213,7 +213,7 @@ fn chords(pattern: &Vec<bool>) -> Box<dyn Midibox> {
         chords, 50, 100
     );
     let random_dropout = random_dropout(velocity, 0.01);
-    MapChord::wrap(random_dropout, |c| {
+    map_chords(random_dropout, |c| {
         let i_1 = rand::thread_rng().gen_range(0..c.notes.len());
         let i_2 = rand::thread_rng().gen_range(0..c.notes.len());
         Chord::new(vec![
@@ -239,8 +239,7 @@ fn hat_accent() -> Box<dyn Midibox> {
 }
 
 fn drum() -> Box<dyn Midibox> {
-    Map::wrap(
-    seq![
+    let seq = seq![
         BD,
         CH,
         BD,
@@ -273,7 +272,10 @@ fn drum() -> Box<dyn Midibox> {
         CH,
         BD,
         CH
-    ].midibox(),
+    ].midibox();
+
+    map_notes(
+        seq,
         |m| {
             if m.tone == CH.midi().tone {
                 return m.set_velocity(rand::thread_rng().gen_range(50..70))

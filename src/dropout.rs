@@ -1,4 +1,4 @@
-use crate::{Map, Midibox};
+use crate::{Map, map_notes, Midibox};
 use rand::Rng;
 use crate::chord::Chord;
 use crate::midi::{Midi, MutMidi};
@@ -6,7 +6,7 @@ use crate::tone::Tone;
 
 
 pub fn random_dropout(midibox: Box<dyn Midibox>, p: f64) -> Box<dyn Midibox> {
-    Map::wrap(midibox, move |m| {
+    map_notes(midibox, move |m| {
         if rand::thread_rng().gen_bool(p) {
             m.set_pitch(Tone::Rest, 3)
         } else {

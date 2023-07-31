@@ -7,7 +7,7 @@ use midibox::meter::{Bpm, Oscillate};
 use midibox::sequences::Seq;
 use midibox::player::{PlayerConfig, try_run};
 use midibox::scale::{Degree, Interval, Scale};
-use midibox::{chord, Map, Midibox, seq};
+use midibox::{chord, map_notes, Midibox, seq};
 use midibox::arp::Arpeggio;
 use midibox::chord::ToChord;
 use midibox::dropout::random_dropout;
@@ -84,7 +84,7 @@ fn bass_midibox() -> Box<dyn Midibox> {
 }
 
 fn drum_midibox() -> Box<dyn Midibox> {
-    Map::wrap(
+    map_notes(
         seq![
         BD,
         SP1,
