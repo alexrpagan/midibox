@@ -6,10 +6,12 @@ use midibox::meter::Bpm;
 use midibox::sequences::Seq;
 use midibox::player::{PlayerConfig, try_run};
 use midibox::scale::{Degree, Direction, Interval, Scale};
-use midibox::{Map, Midibox, seq};
-use midibox::chord::ToChord;
+use midibox::{Map, MapChord, Midibox, seq};
+use midibox::chord::{Chord, ToChord};
+use midibox::dropout::random_dropout;
 use midibox::drumlogue::Drumlogue;
 use midibox::midi::ToMidi;
+use midibox::rand::{random_velocity, random_velocity_range};
 use midibox::router::MapRouter;
 use midibox::scale::Degree::{*};
 use midibox::scale::Pitch::{*};
@@ -25,14 +27,38 @@ fn main() {
     }
     chan_to_port.insert(2, 1);
     chan_to_port.insert(3, 2);
+    chan_to_port.insert(4, 3);
+
+    let pattern_left = &vec![
+        false, false, false, true, false, false,
+        true, false, false, false, true, false,
+        false, false, false, true, false, false,
+        true, false, false, false, false, true,
+        false, false, false, true, false, false,
+        true, false, false, false, true, false,
+        false, false, false, true, false, true,
+        true, false, false, false, true, false,
+    ];
+
+    let pattern_right = &vec![
+        true, false, false, true, false, false,
+        false, false, false, false, true, false,
+        true, false, false, true, false, false,
+        false, true, false, false, true, false,
+        true, false, false, true, false, false,
+        false, false, false, false, true, false,
+        true, false, false, true, false, true,
+        false, true, false, false, false, true,
+    ];
 
     try_run(
         PlayerConfig::from_router(Box::new(MapRouter::new(chan_to_port))),
-        &mut Bpm::new(500),
+        &mut Bpm::new(550),
         &mut vec![
             drum(),
             hat_accent(),
-            chords(),
+            chords(pattern_left),
+            chords(pattern_right),
             bass()
         ]
     ).unwrap()
@@ -101,9 +127,9 @@ fn bass() -> Box<dyn Midibox> {
     ].duration(32).midibox()
 }
 
-fn chords() -> Box<dyn Midibox> {
+fn chords(pattern: &Vec<bool>) -> Box<dyn Midibox> {
     let scale = Scale::major(F);
-    seq![
+    let chords = seq![
         scale.make_chord(
             3,
             Second,
@@ -181,17 +207,34 @@ fn chords() -> Box<dyn Midibox> {
             ]
         ).unwrap()
 
-    ].duration(32).split_notes(
-        &vec![
-            true, false, false, true, false, false, true, false, false, true
-        ]).midibox()
+    ].duration(32).split_notes(pattern).midibox();
+
+    let velocity = random_velocity_range(
+        chords, 50, 100
+    );
+    let random_dropout = random_dropout(velocity, 0.01);
+    MapChord::wrap(random_dropout, |c| {
+        let i_1 = rand::thread_rng().gen_range(0..c.notes.len());
+        let i_2 = rand::thread_rng().gen_range(0..c.notes.len());
+        Chord::new(vec![
+            *c.notes.get(i_1).unwrap(),
+            *c.notes.get(i_2).unwrap(),
+        ])
+    })
 }
 
 fn hat_accent() -> Box<dyn Midibox> {
     seq![
         Tone::Rest * 16,
         Drumlogue::OH,
-        Tone::Rest * 15
+        Tone::Rest * 15,
+        Tone::Rest * 16,
+        Drumlogue::OH,
+        Tone::Rest * 9,
+        Drumlogue::OH,
+        Tone::Rest * 3,
+        Drumlogue::OH,
+        Tone::Rest * 1
     ].midibox()
 }
 
@@ -228,12 +271,12 @@ fn drum() -> Box<dyn Midibox> {
         BD,
         RS,
         CH,
-        CH,
+        BD,
         CH
     ].midibox(),
         |m| {
             if m.tone == CH.midi().tone {
-                return m.set_velocity(rand::thread_rng().gen_range(20..50))
+                return m.set_velocity(rand::thread_rng().gen_range(50..70))
             }
             m
         }

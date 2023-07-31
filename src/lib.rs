@@ -1,4 +1,5 @@
 use midi::{Midi};
+use crate::chord::Chord;
 use crate::dropout::Dropout;
 use crate::scale::Interval::Perf5;
 
@@ -38,5 +39,28 @@ impl <F: Fn(Midi) -> Midi> Midibox for Map<F> {
             .map(|it|
                 it.into_iter().map(|note| (self.mapper)(note)).collect::<Vec<Midi>>()
             )
+    }
+}
+
+pub struct MapChord<T>
+    where T: Fn(Chord) -> Chord
+{
+    mapper: T,
+    midibox: Box<dyn Midibox>,
+}
+
+impl<F: Fn(Chord) -> Chord + 'static> MapChord<F> {
+    pub fn wrap(midibox: Box<dyn Midibox>, mapper: F) -> Box<dyn Midibox> {
+        Box::new(MapChord { mapper, midibox })
+    }
+}
+
+impl <F: Fn(Chord) -> Chord> Midibox for MapChord<F> {
+    fn next(&mut self) -> Option<Vec<Midi>> {
+        self.midibox.next()
+            .map(|it| {
+                let result = (self.mapper)(Chord::new(it));
+                result.notes
+            })
     }
 }
