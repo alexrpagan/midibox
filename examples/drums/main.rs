@@ -16,7 +16,7 @@ use midibox::router::MapRouter;
 use midibox::scale::Degree::{*};
 use midibox::scale::Pitch::{*};
 use midibox::scale::Direction::{*};
-use midibox::tone::Tone::{C, D, E, F};
+use midibox::tone::Tone::{C, D, E, F, Rest};
 
 fn main() {
     env_logger::init();
@@ -25,9 +25,10 @@ fn main() {
     for i in 0..2 {
         chan_to_port.insert(i, 0);
     }
-    chan_to_port.insert(2, 1);
-    chan_to_port.insert(3, 2);
-    chan_to_port.insert(4, 3);
+    chan_to_port.insert(2, 4);
+    chan_to_port.insert(3, 1);
+    chan_to_port.insert(4, 2);
+    chan_to_port.insert(5, 3);
 
     let pattern_left = &vec![
         false, false, false, true, false, false,
@@ -57,6 +58,7 @@ fn main() {
         &mut vec![
             drum(),
             hat_accent(),
+            hats(),
             chords(pattern_left),
             chords(pattern_right),
             bass()
@@ -68,6 +70,34 @@ fn bass() -> Box<dyn Midibox> {
     let scale = Scale::major(F);
     seq![
         scale.make_chord(
+            2,
+            Second,
+            &vec![
+                Harmonize(Unison, UpShiftOct(0)),
+            ]
+        ).unwrap(),
+        scale.make_chord(
+            2,
+            Sixth,
+            &vec![
+                Harmonize(Fifth, UpShiftOct(0)),
+            ]
+        ).unwrap(),
+            scale.make_chord(
+            2,
+            Second,
+            &vec![
+                Harmonize(Third, UpShiftOct(0)),
+            ]
+        ).unwrap(),
+        scale.make_chord(
+            2,
+            Sixth,
+            &vec![
+                Harmonize(Unison, UpShiftOct(0)),
+            ]
+        ).unwrap(),
+                scale.make_chord(
             2,
             Second,
             &vec![
@@ -170,23 +200,30 @@ fn chords(pattern: &Vec<bool>) -> Box<dyn Midibox> {
                 Harmonize(Ninth, Up)
             ]
         ).unwrap(),
-        scale.make_chord(
+            scale.make_chord(
             3,
-            Fourth,
+            Second,
             &vec![
-                Harmonize(Unison, UpShiftOct(-1)),
-                Harmonize(Third, UpShiftOct(1)),
+                Harmonize(Unison, UpShiftOct(-2)),
+                Harmonize(Third, UpShiftOct(-1)),
+                Harmonize(Fourth, Up),
+                Harmonize(Second, Up),
+                Harmonize(Ninth, Up),
+                Harmonize(Seventh, UpShiftOct(-1)),
             ]
         ).unwrap(),
         scale.make_chord(
             3,
-            Third,
+            Sixth,
             &vec![
-                Harmonize(Unison, Up),
-                Harmonize(Third, UpShiftOct(1)),
+                Harmonize(Unison, UpShiftOct(-2)),
+                Harmonize(Third, UpShiftOct(-1)),
+                Harmonize(Fifth, UpShiftOct(-1)),
+                Harmonize(Second, Up),
+                Harmonize(Ninth, Up)
             ]
         ).unwrap(),
-        scale.make_chord(
+            scale.make_chord(
             3,
             Second,
             &vec![
@@ -205,20 +242,61 @@ fn chords(pattern: &Vec<bool>) -> Box<dyn Midibox> {
                 Harmonize(Fifth, UpShiftOct(-1)),
                 Harmonize(Ninth, Up)
             ]
+        ).unwrap(),
+        scale.make_chord(
+            3,
+            Fourth,
+            &vec![
+                Harmonize(Unison, UpShiftOct(-1)),
+                Harmonize(Third, UpShiftOct(-1)),
+                Harmonize(Third, UpShiftOct(1)),
+            ]
+        ).unwrap(),
+        scale.make_chord(
+            3,
+            Third,
+            &vec![
+                Harmonize(Unison, Up),
+                Harmonize(Third, UpShiftOct(-1)),
+                Harmonize(Third, UpShiftOct(1)),
+            ]
+        ).unwrap(),
+        scale.make_chord(
+            3,
+            Second,
+            &vec![
+                Harmonize(Unison, UpShiftOct(-2)),
+                Harmonize(Third, UpShiftOct(-1)),
+                Harmonize(Fifth, UpShiftOct(-1)),
+                Harmonize(Ninth, Up)
+            ]
+        ).unwrap(),
+        scale.make_chord(
+            2,
+            Sixth,
+            &vec![
+                Harmonize(Unison, UpShiftOct(-2)),
+                Harmonize(Third, Up),
+                Harmonize(Fifth, UpShiftOct(-1)),
+                Harmonize(Ninth, Up)
+            ]
         ).unwrap()
 
     ].duration(32).split_notes(pattern).midibox();
 
     let velocity = random_velocity_range(
-        chords, 50, 100
+        chords, 50, 110
     );
+
     let random_dropout = random_dropout(velocity, 0.01);
     map_chords(random_dropout, |c| {
         let i_1 = rand::thread_rng().gen_range(0..c.notes.len());
         let i_2 = rand::thread_rng().gen_range(0..c.notes.len());
+        let i_3 = rand::thread_rng().gen_range(0..c.notes.len());
         Chord::new(vec![
             *c.notes.get(i_1).unwrap(),
             *c.notes.get(i_2).unwrap(),
+            *c.notes.get(i_3).unwrap(),
         ])
     })
 }
@@ -227,10 +305,12 @@ fn hat_accent() -> Box<dyn Midibox> {
     seq![
         Tone::Rest * 16,
         Drumlogue::OH,
-        Tone::Rest * 15,
+        CH,
+        Tone::Rest * 14,
         Tone::Rest * 16,
         Drumlogue::OH,
-        Tone::Rest * 9,
+        CH,
+        Tone::Rest * 8,
         Drumlogue::OH,
         Tone::Rest * 3,
         Drumlogue::OH,
@@ -241,36 +321,86 @@ fn hat_accent() -> Box<dyn Midibox> {
 fn drum() -> Box<dyn Midibox> {
     let seq = seq![
         BD,
-        CH,
+        Rest,
         BD,
-        CH,
+        Rest,
         RS,
-        CH,
-        CH,
+        Rest,
+        Rest,
         BD,
-        BD,
-        RS,
-        CH,
         BD,
         RS,
-        CH,
-        CH,
-        CH,
-        BD,
-        CH,
-        CH,
+        Rest,
         BD,
         RS,
-        CH,
-        CH,
+        Rest,
+        Rest,
+        Rest,
         BD,
-        CH,
+        Rest,
+        Rest,
+        BD,
         RS,
-        CH,
+        Rest,
+        Rest,
+        BD,
+        Rest,
+        RS,
+        Rest,
         BD,
         RS,
-        CH,
+        Rest,
         BD,
+        Rest
+    ].midibox();
+
+    map_notes(
+        seq,
+        |m| {
+            if m.tone == BD.midi().tone {
+                return m.set_velocity(rand::thread_rng().gen_range(100..120))
+            }
+            if m.tone == RS.midi().tone {
+                return m.set_velocity(rand::thread_rng().gen_range(100..120))
+            }
+            m
+        }
+    )
+}
+
+fn hats() -> Box<dyn Midibox> {
+    let seq = seq![
+        SP1,
+        CH,
+        SP1,
+        CH,
+        SP1,
+        CH,
+        CH,
+        SP1,
+        SP1,
+        SP1,
+        CH,
+        SP1,
+        SP1,
+        CH,
+        CH,
+        CH,
+        SP1,
+        CH,
+        CH,
+        SP1,
+        SP1,
+        CH,
+        CH,
+        SP1,
+        CH,
+        SP1,
+        CH,
+        SP1,
+        SP1,
+        CH,
+        SP1,
         CH
     ].midibox();
 
@@ -279,6 +409,9 @@ fn drum() -> Box<dyn Midibox> {
         |m| {
             if m.tone == CH.midi().tone {
                 return m.set_velocity(rand::thread_rng().gen_range(50..70))
+            }
+            if m.tone == SP1.midi().tone {
+                return m.set_velocity(rand::thread_rng().gen_range(30..40))
             }
             m
         }
