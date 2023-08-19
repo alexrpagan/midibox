@@ -36,6 +36,7 @@ impl Chord {
         new_notes.rotate_left(mid);
         Chord { notes: new_notes }
     }
+
 }
 
 pub trait ToChord {

@@ -18,7 +18,7 @@ use midibox::midi::ToMidi;
 use midibox::rand::{random_velocity};
 use midibox::router::MapRouter;
 use midibox::scale::Degree::{Fifth, Third, Unison};
-use midibox::scale::Direction::{Up, UpShiftOct};
+use midibox::scale::Direction::{Up, UpOct};
 use midibox::scale::Pitch::Harmonize;
 
 
@@ -154,12 +154,12 @@ fn primary_phase(scale: Scale, base_oct: u8, inv: bool) -> Seq {
             base_oct,
             Degree::Fourth,
             &vec![
-                Harmonize(Degree::Fifth, UpShiftOct(1)),
+                Harmonize(Degree::Fifth, UpOct(1)),
                 Harmonize(Degree::Seventh, Up),
-                Harmonize(Degree::Third, UpShiftOct(-1)),
+                Harmonize(Degree::Third, UpOct(-1)),
                 Harmonize(Degree::Ninth, Up),
                 Harmonize(Degree::Eleventh, Up),
-                Harmonize(Degree::Unison, UpShiftOct(1))
+                Harmonize(Degree::Unison, UpOct(1))
             ]
         ).unwrap().rotate_left(rotate),
 
@@ -167,9 +167,9 @@ fn primary_phase(scale: Scale, base_oct: u8, inv: bool) -> Seq {
             base_oct - 1,
             Degree::Sixth,
             &vec![
-                Harmonize(Degree::Fifth, UpShiftOct(1)),
-                Harmonize(Degree::Third, UpShiftOct(1)),
-                Harmonize(Degree::Second, UpShiftOct(1)),
+                Harmonize(Degree::Fifth, UpOct(1)),
+                Harmonize(Degree::Third, UpOct(1)),
+                Harmonize(Degree::Second, UpOct(1)),
                 Harmonize(Degree::Seventh, Up),
             ]
         ).unwrap().rotate_left(rotate),
@@ -178,11 +178,11 @@ fn primary_phase(scale: Scale, base_oct: u8, inv: bool) -> Seq {
             base_oct,
             Degree::Unison,
             &vec![
-                Harmonize(Degree::Fifth, UpShiftOct(1)),
-                Harmonize(Degree::Third, UpShiftOct(1)),
+                Harmonize(Degree::Fifth, UpOct(1)),
+                Harmonize(Degree::Third, UpOct(1)),
                 Harmonize(Degree::Seventh, Up),
                 Harmonize(Degree::Ninth, Up),
-                Harmonize(Degree::Unison, UpShiftOct(1))
+                Harmonize(Degree::Unison, UpOct(1))
             ]
         ).unwrap().rotate_left(rotate)
     ]

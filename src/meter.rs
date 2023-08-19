@@ -1,5 +1,8 @@
 use std::ops::Div;
+use std::sync::Arc;
 use std::time::Duration;
+use crossbeam::atomic::AtomicCell;
+use crossbeam::epoch::Atomic;
 use log::{debug, log};
 
 pub trait Meter {
@@ -20,6 +23,24 @@ impl Meter for Bpm {
 impl Bpm {
     pub fn new(bpm: u32) -> Self {
         Bpm { bpm }
+    }
+}
+
+
+#[derive(Debug, Clone)]
+pub struct SyncBpm {
+    bpm: Arc<AtomicCell<u32>>
+}
+
+impl Meter for SyncBpm {
+    fn tick_duration(&mut self) -> Duration {
+        Duration::from_secs(60) / self.bpm.load()
+    }
+}
+
+impl SyncBpm {
+    pub fn new(bpm: Arc<AtomicCell<u32>>) -> Self {
+        SyncBpm { bpm }
     }
 }
 
