@@ -1,9 +1,10 @@
 use midi::{Midi};
 use crate::chord::Chord;
 use crate::dropout::Dropout;
-use crate::map::{Map, MapChord};
+use crate::map::{Map, MapBeat, MapChord};
 use crate::scale::Interval::Perf5;
 
+pub mod composite;
 pub mod sequences;
 pub mod router;
 pub mod dropout;
@@ -35,4 +36,10 @@ pub fn map_chords<F>(around: Box<dyn Midibox>, f: F) -> Box<dyn Midibox>
     where F: Fn(Chord) -> Chord + 'static
 {
     MapChord::wrap(around, f)
+}
+
+pub fn map_beat<F>(around: Box<dyn Midibox>, max_beat: usize, f: F) -> Box<dyn Midibox>
+    where F: Fn(Midi, usize) -> Midi + 'static
+{
+    MapBeat::wrap(around, max_beat, f)
 }

@@ -50,3 +50,32 @@ where F: Fn(Chord) -> Chord {
         self.midibox.next().map(|it| (self.mapper)(Chord::new(it)).notes)
     }
 }
+
+pub struct MapBeat<T>
+    where T: Fn(Midi, usize) -> Midi
+{
+    mapper: T,
+    curr_beat: usize,
+    max_beat: usize,
+    midibox: Box<dyn Midibox>,
+}
+
+impl<F> MapBeat<F>
+    where F: Fn(Midi, usize) -> Midi + 'static
+{
+    pub fn wrap(midibox: Box<dyn Midibox>, max_beat: usize, mapper: F) -> Box<dyn Midibox> {
+        Box::new(MapBeat { mapper, curr_beat: 0, max_beat, midibox })
+    }
+}
+
+impl <F> Midibox for MapBeat<F>
+    where F: Fn(Midi, usize) -> Midi {
+    fn next(&mut self) -> Option<Vec<Midi>> {
+        let result = self.midibox.next()
+            .map(|it|
+                it.into_iter().map(|note| (self.mapper)(note, self.curr_beat)).collect::<Vec<Midi>>()
+            );
+        self.curr_beat = (self.curr_beat + 1) % self.max_beat;
+        result
+    }
+}

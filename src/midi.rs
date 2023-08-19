@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::ops::{Add, Mul, Sub};
 use crate::chord::{Chord, ToChord};
 use crate::scale::{Degree, Interval, Scale};

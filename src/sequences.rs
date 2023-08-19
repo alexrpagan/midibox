@@ -97,6 +97,13 @@ impl Seq {
         self
     }
 
+    pub fn oct(mut self, oct: u8) -> Self {
+        self.notes = self.notes.into_iter().map(|c| {
+            Chord::new(c.notes.into_iter().map(|m| m.set_pitch(m.tone, oct)).collect())
+        }).collect();
+        self
+    }
+
     pub fn scale_duration(mut self, factor: u32) -> Self {
         self.notes = self.notes.into_iter().map(|c| c.scale_duration(factor)).collect();
         self

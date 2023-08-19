@@ -141,7 +141,7 @@ pub enum Pitch {
 pub enum Direction {
     Up,
     Down,
-    UpShiftOct(i8),
+    UpOct(i8),
     DownShiftOct(i8)
 }
 
@@ -150,7 +150,7 @@ impl Direction {
         match self {
             Direction::Up => true,
             Direction::Down => false,
-            Direction::UpShiftOct(_) => true,
+            Direction::UpOct(_) => true,
             Direction::DownShiftOct(_) => false
         }
     }
@@ -159,7 +159,7 @@ impl Direction {
         match self {
             Direction::Up => 0,
             Direction::Down => 0,
-            Direction::UpShiftOct(o) => *o as i8,
+            Direction::UpOct(o) => *o as i8,
             Direction::DownShiftOct(o) => -(*o as i8)
         }
     }
