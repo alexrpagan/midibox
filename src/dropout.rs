@@ -17,7 +17,7 @@ pub fn random_dropout(midibox: Box<dyn Midibox>, p: f64) -> Box<dyn Midibox> {
 
 pub struct Dropout {
     duration: u32,
-    duration_seen: u32,
+    duration_seen: u64,
     playing: bool,
     midibox: Box<dyn Midibox>,
 }
@@ -35,15 +35,23 @@ impl Dropout {
 
 impl Midibox for Dropout {
     fn next(&mut self) -> Option<Vec<Midi>> {
-        if self.duration_seen >= self.duration {
+        if self.duration == 0 {
             self.duration_seen = 0;
             self.playing = !self.playing;
+        } else {
+            // Notes can cross several boundaries. Keep the partial period and
+            // only reverse the state when an odd number of periods elapsed.
+            let periods = self.duration_seen / u64::from(self.duration);
+            self.duration_seen %= u64::from(self.duration);
+            if periods % 2 == 1 {
+                self.playing = !self.playing;
+            }
         }
         let to_play: Option<Vec<Midi>> = self.midibox.next();
         return match to_play {
             Some(notes) => {
                 let to_play_chord = Chord { notes: notes.clone() };
-                self.duration_seen += to_play_chord.total_duration();
+                self.duration_seen += u64::from(to_play_chord.total_duration());
                 if self.playing {
                     // forward the notes
                     return Some(notes)
