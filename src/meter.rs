@@ -63,7 +63,6 @@ impl Oscillate {
 
 impl Meter for Oscillate {
     fn tick_duration(&mut self) -> Duration {
-        let curr_time = Duration::from_secs(60) / self.current_bpm as u32;
         if self.current_bpm >= self.max_bpm as f64 {
             self.current_bpm = self.max_bpm as f64;
             self.accel = false;
@@ -71,6 +70,7 @@ impl Meter for Oscillate {
             self.current_bpm = self.min_bpm as f64;
             self.accel = true;
         }
+        let curr_time = Duration::from_secs(60) / self.current_bpm as u32;
         if self.accel {
             self.current_bpm += self.step;
         } else {
