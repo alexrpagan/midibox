@@ -124,6 +124,12 @@ impl Midibox for Arpeggio {
         for select in self.pattern.mask.iter() {
             result.append(&mut select.select(&chord, self.iterations_at_position));
         }
+        // The final step must end at the chord boundary, even when the step
+        // duration does not divide the chord's duration evenly.
+        let remaining_duration = chord.total_duration() - self.duration_at_position;
+        for note in &mut result {
+            note.duration = note.duration.min(remaining_duration);
+        }
         let max_duration = result.iter()
             .map(|to_play| to_play.duration)
             .max()
